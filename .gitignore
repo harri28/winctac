@@ -1,0 +1,18 @@
+# User-uploaded content (product images, banners, logos, QR codes) — generated at runtime, not source
+/uploads/*
+!/uploads/.gitkeep
+!/uploads/productos/
+/uploads/productos/*
+!/uploads/productos/.gitkeep
+
+# Local investigation/scratch files (Windows/XAMPP specific, not part of the app)
+apache_extra_search.txt
+apache_httpd_header.txt
+apache_vhosts_header.txt
+
+# OS/editor cruft
+.DS_Store
+Thumbs.db
+
+# Personal/local Claude Code settings (not shared project config)
+.claude/settings.local.json
