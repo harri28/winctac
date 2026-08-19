@@ -5,9 +5,12 @@
 // ============================================================
 require_once __DIR__ . '/../config/app.php';
 
-$dsn  = 'pgsql:host=127.0.0.1;port=5432;dbname=selvadigital';
-$user = 'postgres';
-$pass = '1234';
+$host = getenv('DB_HOST') ?: '127.0.0.1';
+$port = getenv('DB_PORT') ?: '5432';
+$name = getenv('DB_NAME') ?: 'selvadigital';
+$dsn  = "pgsql:host=$host;port=$port;dbname=$name";
+$user = getenv('DB_USER') ?: 'postgres';
+$pass = getenv('DB_PASS') ?: '1234';
 
 echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Setup Selvadigital</title>
