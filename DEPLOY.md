@@ -1,149 +1,176 @@
 # Despliegue en Ubuntu Server
 
-Guía para publicar Selvadigital Ecommerce en un servidor Ubuntu, con el código
-conectado a GitHub (`git@github.com:harri28/winctac.git`) y comunicándose por SSH.
+Estado real del despliegue de Selvadigital Ecommerce en producción, con el
+código conectado a GitHub (`git@github.com:harri28/winctac.git`) y clonado en
+el servidor por SSH mediante una deploy key dedicada.
 
 Datos de este despliegue:
-- Servidor: `161.132.4.82`
-- Dominio: `wintac.shop` (⚠️ revisa la nota de DNS al final — el registro A
-  actual apunta a `2.57.91.91`, no a `161.132.4.82`; corrígelo en tu proveedor DNS)
-- Ruta en el servidor: `/var/www/ecomerce`
-- La app ahora usa `BASE_URL` en vez de rutas fijas `/ecomerce`, así que se sirve
-  correctamente en la raíz del dominio (`https://wintac.shop/`)
+- Servidor: `161.132.4.82` (VPS compartido — ver nota abajo, ya tenía otro sitio)
+- Dominio: `wintac.shop` / `www.wintac.shop`, con SSL (Let's Encrypt / certbot)
+- Ruta del código: `/var/www/ecomerce`
+- La app usa `BASE_URL` (no rutas fijas `/ecomerce`), así que se sirve
+  correctamente en la raíz del dominio
 
-Todos los comandos de esta guía se ejecutan **dentro del servidor** (conéctate
-primero con `ssh tu_usuario@161.132.4.82`), salvo que se indique lo contrario.
+## ⚠️ Este VPS es compartido — no es un servidor limpio
+
+El servidor ya tenía otro proyecto corriendo (`sys360.cloud`, una app
+Python/uvicorn en el puerto 8000) cuando se desplegó esta tienda. Esto
+determinó decisiones importantes que hay que respetar en cualquier cambio
+futuro:
+
+- **nginx** es el único servidor web activo en los puertos 80/443 (no Apache
+  — Apache está instalado pero deshabilitado con `systemctl disable apache2`
+  porque nginx ya tenía esos puertos ocupados por `sys360.cloud`).
+- **PHP se sirve vía PHP-FPM** (`php8.1-fpm`), no `mod_php`/Apache.
+- **PostgreSQL tiene 3 clusters** en este servidor (versiones 12, 14, 17).
+  El cluster v14 en el **puerto 5433** estaba vacío y se usó para esta tienda;
+  el cluster v12 en el puerto 5432 pertenece al otro sitio (base `structure`,
+  rol `appuser`) — **nunca tocar esa base**.
+
+Si necesitas tocar la configuración de nginx o PostgreSQL en este servidor,
+revisa primero qué más hay corriendo (`ls /etc/nginx/sites-enabled/`,
+`pg_lsclusters`, `ss -tlnp`) antes de modificar o reiniciar nada.
 
 ## 1. Paquetes del sistema
 
+Ya instalados en este servidor: `nginx` (preexistente), `postgresql` (cluster
+v14 puerto 5433, preexistente), `php8.1-fpm`, `php8.1-pgsql`, `php8.1-mbstring`,
+`git`, `certbot` + `python3-certbot-nginx`.
+
+En un servidor nuevo desde cero (sin nginx/otro sitio ya corriendo), sería:
+
 ```bash
-sudo apt update
-sudo apt install -y apache2 postgresql postgresql-contrib \
-  php libapache2-mod-php php-pgsql php-mbstring php-curl php-xml git
+apt update && apt upgrade -y
+apt install -y nginx postgresql postgresql-contrib \
+  php-fpm php-pgsql php-mbstring php-curl php-xml git \
+  certbot python3-certbot-nginx
 ```
 
-## 2. Llave SSH del servidor para GitHub (deploy key)
+## 2. Deploy key SSH del servidor hacia GitHub
 
-El servidor necesita su propia llave SSH para poder clonar/actualizar el
-repositorio por SSH, independiente de tu llave personal.
+El servidor tiene su propia llave (`~/.ssh/id_ed25519`, comentario
+`ecomerce-server`), agregada en GitHub como **Deploy Key de solo lectura** en
+`https://github.com/harri28/winctac/settings/keys` (sin "Allow write access"
+— el servidor solo hace `git pull`, nunca `git push`).
 
-```bash
-ssh-keygen -t ed25519 -C "ecomerce-server" -f ~/.ssh/id_ed25519 -N ""
-cat ~/.ssh/id_ed25519.pub
-```
-
-Copia esa clave pública y agrégala en GitHub como **Deploy Key** (no como llave
-de tu cuenta personal):
-
-`https://github.com/harri28/winctac/settings/keys` → **Add deploy key** → pega
-la clave → dejar **sin marcar** "Allow write access" (solo necesita leer/hacer
-`git pull`, no `git push` desde el servidor).
-
-Prueba la conexión:
+## 3. Repositorio
 
 ```bash
-ssh -T git@github.com
-# "Hi harri28/winctac! You've successfully authenticated..."
-```
-
-## 3. Clonar el repositorio
-
-```bash
-sudo mkdir -p /var/www/ecomerce
-sudo chown $USER:$USER /var/www/ecomerce
 git clone git@github.com:harri28/winctac.git /var/www/ecomerce
 ```
 
-## 4. Base de datos PostgreSQL
-
-Crea una contraseña fuerte para producción — **no reutilices** la `1234` de
-desarrollo local.
+## 4. Base de datos PostgreSQL (cluster v14, puerto 5433)
 
 ```bash
-sudo -u postgres psql -c "CREATE DATABASE selvadigital;"
-sudo -u postgres psql -c "ALTER USER postgres WITH PASSWORD 'PON_AQUI_UNA_CONTRASENA_FUERTE';"
+sudo -u postgres psql -p 5433 -c "CREATE ROLE selvadigital_app LOGIN PASSWORD '...';"
+sudo -u postgres psql -p 5433 -c "CREATE DATABASE selvadigital OWNER selvadigital_app;"
 ```
 
-(Si prefieres un usuario dedicado en vez de reutilizar `postgres`, créalo con
-`CREATE USER selvadigital_app WITH PASSWORD '...';` y
-`GRANT ALL PRIVILEGES ON DATABASE selvadigital TO selvadigital_app;`, y usa
-ese usuario en `DB_USER` más abajo.)
+La contraseña real está únicamente en el pool de PHP-FPM (paso 5) — no está
+en ningún archivo del repositorio.
 
-## 5. Variables de entorno (credenciales y URL base)
+## 5. Pool dedicado de PHP-FPM (credenciales vía variables de entorno)
 
-El código lee estas variables con `getenv()` (`config/database.php`,
-`database/setup.php`, `config/app.php`) — si no están definidas, usa los
-valores de desarrollo local. Defínelas en el VirtualHost de Apache para que
-sólo apliquen a este sitio.
+El código lee `DB_HOST/DB_PORT/DB_NAME/DB_USER/DB_PASS` y `ECOMMERCE_BASE_URL`
+con `getenv()` (`config/database.php`, `database/setup.php`, `config/app.php`).
+PHP-FPM borra el entorno por defecto, así que hace falta `clear_env = no` y
+declarar cada variable explícitamente en el pool:
 
-## 6. VirtualHost de Apache
+`/etc/php/8.1/fpm/pool.d/wintac.conf`:
+
+```ini
+[wintac]
+user = www-data
+group = www-data
+listen = /run/php/wintac.sock
+listen.owner = www-data
+listen.group = www-data
+pm = dynamic
+pm.max_children = 5
+pm.start_servers = 2
+pm.min_spare_servers = 1
+pm.max_spare_servers = 3
+clear_env = no
+env[DB_HOST] = 127.0.0.1
+env[DB_PORT] = 5433
+env[DB_NAME] = selvadigital
+env[DB_USER] = selvadigital_app
+env[DB_PASS] = ...
+env[ECOMMERCE_BASE_URL] = https://wintac.shop
+```
 
 ```bash
-sudo tee /etc/apache2/sites-available/wintac.shop.conf > /dev/null <<'EOF'
-<VirtualHost *:80>
-    ServerName wintac.shop
-    ServerAlias www.wintac.shop
-    DocumentRoot /var/www/ecomerce
+systemctl restart php8.1-fpm
+```
 
-    SetEnv ECOMMERCE_BASE_URL "https://wintac.shop"
-    SetEnv DB_HOST "127.0.0.1"
-    SetEnv DB_PORT "5432"
-    SetEnv DB_NAME "selvadigital"
-    SetEnv DB_USER "postgres"
-    SetEnv DB_PASS "PON_AQUI_LA_MISMA_CONTRASENA_FUERTE"
+Cambios en este archivo (por ejemplo, rotar la contraseña) requieren
+`systemctl restart php8.1-fpm` para aplicarse.
 
-    <Directory /var/www/ecomerce>
-        AllowOverride All
-        Require all granted
-    </Directory>
+## 6. Server block de nginx
 
-    ErrorLog ${APACHE_LOG_DIR}/wintac-error.log
-    CustomLog ${APACHE_LOG_DIR}/wintac-access.log combined
-</VirtualHost>
-EOF
+`/etc/nginx/sites-available/wintac.shop` (enlazado en `sites-enabled`):
 
-sudo a2ensite wintac.shop.conf
-sudo a2enmod php* rewrite
-sudo apache2ctl configtest
-sudo systemctl reload apache2
+```nginx
+server {
+    listen 80;
+    server_name wintac.shop www.wintac.shop;
+    root /var/www/ecomerce;
+    index index.php index.html;
+
+    location ^~ /database/ {
+        deny all;
+        return 404;
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/wintac.sock;
+    }
+
+    location ~* \.(jpg|jpeg|png|gif|webp|svg|css|js|ico)$ {
+        expires 30d;
+        access_log off;
+    }
+}
+```
+
+`certbot --nginx` añadió automáticamente el bloque `listen 443 ssl` y el
+redirect 80→443 sobre este mismo archivo — no lo pises al editarlo a mano.
+
+```bash
+ln -sf /etc/nginx/sites-available/wintac.shop /etc/nginx/sites-enabled/wintac.shop
+nginx -t && systemctl reload nginx
 ```
 
 ## 7. Permisos
 
 ```bash
-sudo chown -R www-data:www-data /var/www/ecomerce/uploads
-sudo find /var/www/ecomerce/uploads -type d -exec chmod 775 {} \;
-sudo find /var/www/ecomerce/uploads -type f -exec chmod 664 {} \;
+chown -R www-data:www-data /var/www/ecomerce/uploads
+find /var/www/ecomerce/uploads -type d -exec chmod 775 {} \;
+find /var/www/ecomerce/uploads -type f -exec chmod 664 {} \;
 ```
 
-## 8. Crear el esquema (una sola vez)
+## 8. Esquema de base de datos (ya ejecutado)
 
-Con el DNS ya apuntando al servidor (ver nota final), visita en el navegador:
+`database/setup.php` y `database/migrar.php` ya se corrieron una vez contra
+`selvadigital` (cluster 5433). El bloque `location ^~ /database/ { deny all; }`
+del paso 6 ya está activo, así que esas URLs devuelven 404 públicamente.
 
-1. `https://wintac.shop/database/setup.php` — crea las tablas
-2. `https://wintac.shop/database/migrar.php` — aplica migraciones
+Si necesitas correr una migración nueva más adelante: comenta temporalmente
+ese bloque `location`, recarga nginx, visita la URL, y vuelve a comentarlo.
 
-**Después de ejecutarlos una vez, bloquea el acceso público a `/database/`**
-(esos scripts pueden volver a ejecutarse si alguien conoce la URL):
+## 9. HTTPS (Let's Encrypt) — ya configurado
 
 ```bash
-sudo tee -a /etc/apache2/sites-available/wintac.shop.conf > /dev/null <<'EOF'
-<Directory /var/www/ecomerce/database>
-    Require all denied
-</Directory>
-EOF
-sudo systemctl reload apache2
+certbot --nginx -d wintac.shop -d www.wintac.shop --redirect --agree-tos -m petram.control@gmail.com
 ```
 
-(Vuelve a permitir el acceso temporalmente sólo si necesitas correr una
-migración nueva más adelante.)
-
-## 9. HTTPS (Let's Encrypt)
-
-```bash
-sudo apt install -y certbot python3-certbot-apache
-sudo certbot --apache -d wintac.shop -d www.wintac.shop
-```
+Certbot renueva automáticamente vía systemd timer. El certificado actual
+vence el 2026-11-16.
 
 ## 10. Flujo de actualización (deploy de cambios nuevos)
 
@@ -154,18 +181,14 @@ En el servidor, para publicar la nueva versión:
 ```bash
 cd /var/www/ecomerce
 git pull origin main
-sudo chown -R www-data:www-data uploads
+chown -R www-data:www-data uploads
 ```
 
-## Nota importante: DNS
+No hace falta reiniciar nginx ni PHP-FPM para cambios de código PHP normales
+— solo si tocas el pool (`wintac.conf`) o el server block de nginx.
 
-El registro DNS actual de `wintac.shop` es:
+## Credenciales por defecto — cambiar de inmediato
 
-```
-A     @     2.57.91.91      (⚠️ no coincide con el servidor 161.132.4.82)
-CNAME www   wintac.shop
-```
-
-Antes de que `https://wintac.shop/` funcione contra este servidor, corrige el
-registro **A** en tu proveedor DNS para que apunte a `161.132.4.82`. El TTL de
-50s hará que el cambio se propague rápido.
+El seed inicial crea un admin con `admin@tienda.com` / `admin123`. Entra a
+`https://wintac.shop/admin/login.php` y cambia esa contraseña cuanto antes;
+son credenciales públicas en el código fuente.
