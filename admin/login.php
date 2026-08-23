@@ -54,9 +54,15 @@ $shopName = htmlspecialchars($cfg['nombre_tienda'] ?? 'Mi Tienda');
 
 <div style="width:100%;max-width:380px;padding:20px">
     <div style="text-align:center;margin-bottom:28px">
+        <?php if (!empty($cfg['logo_path']) && file_exists(UPLOADS_PATH . '/' . $cfg['logo_path'])): ?>
+        <div style="width:52px;height:52px;border-radius:14px;display:inline-flex;align-items:center;justify-content:center;overflow:hidden;margin-bottom:14px">
+            <img src="<?= UPLOADS_URL ?>/<?= htmlspecialchars($cfg['logo_path']) ?>" alt="<?= $shopName ?>" style="width:100%;height:100%;object-fit:contain">
+        </div>
+        <?php else: ?>
         <div style="width:52px;height:52px;background:var(--primary);border-radius:14px;display:inline-flex;align-items:center;justify-content:center;color:#fff;font-size:1.4rem;margin-bottom:14px">
             <i class="fas fa-store"></i>
         </div>
+        <?php endif; ?>
         <h1 style="font-size:1.3rem;font-weight:700"><?= $shopName ?></h1>
         <p style="color:var(--text-muted);font-size:.9rem">Panel de administración</p>
     </div>
