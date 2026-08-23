@@ -122,6 +122,9 @@ $migraciones = [
         created_at TIMESTAMP DEFAULT NOW(),
         used_at TIMESTAMP
     )",
+
+    // ── Etiquetas de búsqueda en productos ──
+    'productos_etiquetas' => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS etiquetas TEXT DEFAULT '[]'",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

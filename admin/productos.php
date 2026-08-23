@@ -200,6 +200,17 @@ $totalInactivos = count($productos) - $totalActivos;
             <textarea id="f-descripcion" class="form-control" rows="2" placeholder="Opcional"></textarea>
         </div>
 
+        <div class="form-group" style="position:relative">
+            <label class="form-label">
+                Etiquetas <span style="color:var(--text-muted);font-size:.75rem;font-weight:400">(uso interno, ayudan a que el buscador lo encuentre)</span>
+            </label>
+            <div id="tags-box" class="form-control" style="height:auto;min-height:38px;display:flex;flex-wrap:wrap;gap:6px;align-items:center;padding:6px 8px;cursor:text" onclick="document.getElementById('f-tag-input').focus()">
+                <input type="text" id="f-tag-input" placeholder="Escribe y presiona Enter..." style="border:none;outline:none;flex:1;min-width:120px;font-size:.85rem;padding:4px 2px;background:transparent">
+            </div>
+            <div id="tags-suggestions" style="display:none;position:absolute;z-index:10;background:#fff;border:1px solid var(--border);border-radius:8px;box-shadow:var(--shadow-lg);margin-top:4px;max-height:160px;overflow-y:auto;width:100%"></div>
+            <div class="form-hint">Ej: limpieza, cuidado del hogar. Enter o coma para agregar.</div>
+        </div>
+
         <div class="form-group">
             <label class="form-label">Imagen</label>
             <input type="file" id="f-imagen" class="form-control" accept="image/*" onchange="previewImagen(this)">
@@ -245,6 +256,13 @@ $totalInactivos = count($productos) - $totalActivos;
 <script>
 let modalProductoId = 0;
 let modalImagenActual = '';
+let tagsActuales = [];
+let todasLasEtiquetas = [];
+
+fetch(window.BASE_URL + '/admin/api.php?action=etiquetas_sugeridas')
+    .then(r => r.json())
+    .then(d => { if (d.success) todasLasEtiquetas = d.data; })
+    .catch(() => {});
 
 // ── FILTROS ──
 function filtrar() {
@@ -324,6 +342,8 @@ function abrirNuevo() {
     document.getElementById('f-activo').checked = true;
     document.getElementById('modal-img-preview').innerHTML = '<i class="fas fa-image fa-2x"></i>';
     document.getElementById('modal-msg').style.display = 'none';
+    tagsActuales = [];
+    renderTags();
     cerrarNuevaCategoria();
     document.getElementById('modal-producto').style.display = 'flex';
 }
@@ -347,9 +367,82 @@ function abrirEditar(p) {
         ? `<img src="${window.BASE_URL}/uploads/productos/${modalImagenActual}" style="width:100%;height:100%;object-fit:contain;padding:6px">`
         : '<i class="fas fa-image fa-2x"></i>';
 
+    try { tagsActuales = JSON.parse(p.etiquetas || '[]'); } catch (e) { tagsActuales = []; }
+    if (!Array.isArray(tagsActuales)) tagsActuales = [];
+    renderTags();
+
     cerrarNuevaCategoria();
     document.getElementById('modal-producto').style.display = 'flex';
 }
+
+// ── ETIQUETAS (chips estilo hashtag, con autocompletado) ──
+function escapeHtml(s) {
+    const div = document.createElement('div');
+    div.textContent = s;
+    return div.innerHTML;
+}
+
+function renderTags() {
+    const box = document.getElementById('tags-box');
+    const input = document.getElementById('f-tag-input');
+    box.querySelectorAll('.tag-pill').forEach(el => el.remove());
+    tagsActuales.forEach((t, i) => {
+        const pill = document.createElement('span');
+        pill.className = 'tag-pill';
+        pill.style.cssText = 'background:var(--primary-bg);color:var(--primary);padding:3px 8px;border-radius:14px;font-size:.78rem;display:inline-flex;align-items:center;gap:5px;white-space:nowrap';
+        pill.innerHTML = `${escapeHtml(t)} <span style="cursor:pointer;font-weight:700" onclick="quitarTag(${i})">&times;</span>`;
+        box.insertBefore(pill, input);
+    });
+}
+
+function agregarTag(valor) {
+    valor = valor.trim().replace(/,$/, '').trim();
+    if (!valor) return;
+    if (tagsActuales.some(t => t.toLowerCase() === valor.toLowerCase())) {
+        document.getElementById('f-tag-input').value = '';
+        ocultarSugerencias();
+        return;
+    }
+    tagsActuales.push(valor);
+    renderTags();
+    document.getElementById('f-tag-input').value = '';
+    ocultarSugerencias();
+}
+
+function quitarTag(i) {
+    tagsActuales.splice(i, 1);
+    renderTags();
+}
+
+function mostrarSugerencias(q) {
+    const box = document.getElementById('tags-suggestions');
+    q = q.trim().toLowerCase();
+    if (!q) { box.style.display = 'none'; return; }
+    const matches = todasLasEtiquetas
+        .filter(t => t.toLowerCase().includes(q) && !tagsActuales.some(a => a.toLowerCase() === t.toLowerCase()))
+        .slice(0, 8);
+    if (!matches.length) { box.style.display = 'none'; return; }
+    box.innerHTML = matches.map(t =>
+        `<div style="padding:8px 12px;cursor:pointer;font-size:.85rem" onmousedown="agregarTag('${t.replace(/'/g, "\\'")}')" onmouseover="this.style.background='var(--surface-3)'" onmouseout="this.style.background=''">${escapeHtml(t)}</div>`
+    ).join('');
+    box.style.display = 'block';
+}
+
+function ocultarSugerencias() {
+    document.getElementById('tags-suggestions').style.display = 'none';
+}
+
+const tagInput = document.getElementById('f-tag-input');
+tagInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        agregarTag(e.target.value);
+    } else if (e.key === 'Backspace' && !e.target.value && tagsActuales.length) {
+        quitarTag(tagsActuales.length - 1);
+    }
+});
+tagInput.addEventListener('input', (e) => mostrarSugerencias(e.target.value));
+tagInput.addEventListener('blur', () => setTimeout(ocultarSugerencias, 150));
 
 // ── NUEVA CATEGORÍA (inline, desde el modal de producto) ──
 function toggleNuevaCategoria() {
@@ -421,6 +514,7 @@ async function guardarProducto() {
     form.append('precio', precio);
     form.append('stock', stock);
     form.append('descripcion', document.getElementById('f-descripcion').value.trim());
+    form.append('etiquetas', JSON.stringify(tagsActuales));
     form.append('activo', document.getElementById('f-activo').checked ? '1' : '0');
     const imgFile = document.getElementById('f-imagen').files[0];
     if (imgFile) form.append('imagen', imgFile);

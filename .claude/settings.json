@@ -46,7 +46,16 @@
       "Bash(/c/xampp/php/php.exe \"C:/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/seed_productos.php\")",
       "Bash(rm \"/c/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/seed_productos.php\")",
       "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/nosotros.php)",
-      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/includes/footer.php)"
+      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/includes/footer.php)",
+      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/admin/api.php)",
+      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/admin/productos.php)",
+      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/api/index.php)",
+      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/index.php)",
+      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/database/migrar.php)",
+      "Bash(/c/xampp/php/php.exe \"C:/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/test_etiquetas.php\")",
+      "Bash(rm \"/c/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/test_etiquetas.php\")",
+      "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/admin/reportes.php)",
+      "Bash(rm \"/c/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/test_reportes_harness.php\" /tmp/err_*.log 2>/dev/null; true)"
     ],
     "additionalDirectories": [
       "C:\\Users\\harri\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-ecomerce\\a8fac820-228b-447a-bae1-ca2d9f6753a2\\scratchpad"

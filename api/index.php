@@ -18,15 +18,22 @@ $pdo = getDB();
 // en precio/stock enviados por el navegador.
 function obtenerCatalogo(PDO $pdo): array {
     $imgBase = BASE_URL . '/uploads/productos/';
-    return $pdo->query("
+    $productos = $pdo->query("
         SELECT p.id, p.nombre, p.codigo, p.descripcion, p.precio, p.stock,
-               p.categoria_id, c.nombre AS categoria,
+               p.categoria_id, c.nombre AS categoria, p.etiquetas,
                CASE WHEN p.imagen_path <> '' THEN '$imgBase' || p.imagen_path ELSE NULL END AS imagen
         FROM productos p
         LEFT JOIN categorias c ON c.id = p.categoria_id
         WHERE p.activo = TRUE
         ORDER BY p.nombre ASC
     ")->fetchAll();
+    // Las etiquetas son uso interno del buscador: nunca se muestran en la UI,
+    // pero viajan en el catálogo para que el filtro de búsqueda las revise.
+    foreach ($productos as &$p) {
+        $tags = json_decode($p['etiquetas'] ?? '[]', true);
+        $p['etiquetas'] = is_array($tags) ? $tags : [];
+    }
+    return $productos;
 }
 
 try {

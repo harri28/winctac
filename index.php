@@ -198,7 +198,10 @@ function renderProductos() {
     const q = (document.getElementById('header-search-input').value || '').toLowerCase();
     let lista = allProductos.filter(p => {
         const catOk = categoriaActiva === 'all' || p.categoria_id == categoriaActiva;
-        const qOk = !q || p.nombre.toLowerCase().includes(q) || (p.codigo||'').toLowerCase().includes(q);
+        const qOk = !q
+            || p.nombre.toLowerCase().includes(q)
+            || (p.codigo||'').toLowerCase().includes(q)
+            || (p.etiquetas||[]).some(t => t.toLowerCase().includes(q));
         return catOk && qOk;
     });
 

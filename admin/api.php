@@ -93,6 +93,22 @@ try {
             $categoriaId = !empty($_POST['categoria_id']) ? intval($_POST['categoria_id']) : null;
             $activo      = (isset($_POST['activo']) && $_POST['activo'] !== '0') ? 't' : 'f';
 
+            // Etiquetas de búsqueda: llegan como JSON (array de strings) desde el input tipo chips.
+            // Nunca se confía en lo que mande el navegador: se limpia, se recorta longitud y se
+            // deduplica sin distinguir mayúsculas/minúsculas antes de guardar.
+            $etiquetasRaw = json_decode($_POST['etiquetas'] ?? '[]', true);
+            $etiquetas    = [];
+            if (is_array($etiquetasRaw)) {
+                $vistas = [];
+                foreach ($etiquetasRaw as $t) {
+                    $t = trim(mb_substr((string)$t, 0, 40));
+                    if ($t === '' || isset($vistas[mb_strtolower($t)])) continue;
+                    $vistas[mb_strtolower($t)] = true;
+                    $etiquetas[] = $t;
+                }
+            }
+            $etiquetasJson = json_encode($etiquetas, JSON_UNESCAPED_UNICODE);
+
             if (!$nombre) { echo json_encode(['success' => false, 'error' => 'El nombre es requerido']); break; }
             if ($precio < 0 || $stock < 0) { echo json_encode(['success' => false, 'error' => 'Precio y stock no pueden ser negativos']); break; }
 
@@ -121,23 +137,23 @@ try {
                         @unlink(UPLOADS_PATH . '/productos/' . $prevPath);
                     }
                     $pdo->prepare('
-                        UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, imagen_path=?, updated_at=NOW()
+                        UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, imagen_path=?, etiquetas=?, updated_at=NOW()
                         WHERE id=?
-                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath, $productoId]);
+                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath, $etiquetasJson, $productoId]);
                 } else {
                     $pdo->prepare('
-                        UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, updated_at=NOW()
+                        UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, etiquetas=?, updated_at=NOW()
                         WHERE id=?
-                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $productoId]);
+                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $etiquetasJson, $productoId]);
                 }
                 echo json_encode(['success' => true, 'id' => $productoId]);
             } else {
                 $ins = $pdo->prepare('
-                    INSERT INTO productos (nombre, codigo, descripcion, precio, stock, categoria_id, activo, imagen_path)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO productos (nombre, codigo, descripcion, precio, stock, categoria_id, activo, imagen_path, etiquetas)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING id
                 ');
-                $ins->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath ?? '']);
+                $ins->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath ?? '', $etiquetasJson]);
                 echo json_encode(['success' => true, 'id' => $ins->fetchColumn()]);
             }
             break;
@@ -153,6 +169,25 @@ try {
                 @unlink(UPLOADS_PATH . '/productos/' . $imgPath);
             }
             echo json_encode(['success' => true]);
+            break;
+
+        // Lista de etiquetas ya usadas en cualquier producto, para autocompletado
+        // en el input de etiquetas (estilo sugerencias de hashtags).
+        case 'etiquetas_sugeridas':
+            $rows = $pdo->query("SELECT etiquetas FROM productos WHERE etiquetas IS NOT NULL AND etiquetas != '[]'")->fetchAll(PDO::FETCH_COLUMN);
+            $vistas = [];
+            foreach ($rows as $json) {
+                $arr = json_decode($json, true);
+                if (!is_array($arr)) continue;
+                foreach ($arr as $t) {
+                    $t = trim((string)$t);
+                    if ($t === '' || isset($vistas[mb_strtolower($t)])) continue;
+                    $vistas[mb_strtolower($t)] = $t;
+                }
+            }
+            $lista = array_values($vistas);
+            sort($lista, SORT_FLAG_CASE | SORT_STRING);
+            echo json_encode(['success' => true, 'data' => $lista]);
             break;
 
         // ── CATEGORÍAS ───────────────────────────────────────
