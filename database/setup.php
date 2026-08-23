@@ -51,7 +51,7 @@ try {
 
     echo '<div class="info">
         <strong>Credenciales de admin por defecto:</strong><br>
-        Email: admin@tienda.com<br>
+        Email: admin<br>
         Contraseña: admin123
     </div>';
 
