@@ -235,7 +235,7 @@ INSERT INTO config (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
 
 -- Admin por defecto: admin / admin123
 INSERT INTO admin_usuarios (nombre, email, password_hash)
-VALUES ('Administrador', 'admin', '$2y$10$TKh8H1.PfYkAfam1yCmSpO3bJTuCJ1j7CRFd1sXGFMpXnv3VGGYeS')
+VALUES ('Administrador', 'admin', '$2y$10$tCq8.q6YA.MXRTqCMmXsy.nxbAK7dGpLSKvRBWmn.LXgzd6rgY0iy')
 ON CONFLICT (email) DO NOTHING;
 
 -- Empresas de envío de ejemplo
