@@ -35,7 +35,7 @@ try {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=23">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=24">
     <script>window.BASE_URL = "<?= BASE_URL ?>";</script>
     <style>
         .admin-sidebar { display:flex; flex-direction:column; }
@@ -113,6 +113,7 @@ try {
                 ['page' => 'config',      'href' => BASE_URL . '/admin/config.php',      'icon' => 'fa-sliders-h',    'label' => 'Configuración'],
                 ['page' => 'facturacion', 'href' => BASE_URL . '/admin/facturacion.php', 'icon' => 'fa-file-invoice', 'label' => 'Facturación'],
                 ['page' => 'banners',     'href' => BASE_URL . '/admin/banners.php',     'icon' => 'fa-images',       'label' => 'Banners'],
+                ['page' => 'portal_web',  'href' => BASE_URL . '/admin/portal-web.php',  'icon' => 'fa-globe',        'label' => 'Portal Web'],
             ]],
         ];
 
