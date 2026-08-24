@@ -32,7 +32,7 @@ $contactoCelular = trim($cfg['contacto_celular'] ?? '');
         <?php endif; ?>
 
         <div class="footer-col">
-            <a href="<?= BASE_URL ?>/nosotros.php" target="_blank" rel="noopener" class="btn btn-secondary" style="font-size:.82rem">
+            <a href="<?= BASE_URL ?>/nosotros.php" target="_blank" rel="noopener" style="color:#fff;font-size:.85rem">
                 <i class="fas fa-store"></i> Conócenos
             </a>
         </div>
