@@ -64,6 +64,15 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
         </div>
     </div>
 
+    <div class="card" style="margin-top:20px">
+        <div class="card-title"><i class="fas fa-book-open"></i> Historia</div>
+        <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7">
+            Nacimos con el objetivo de ofrecer una forma simple y confiable de comprar en línea.
+            Desde entonces, hemos crecido junto a nuestros clientes, ampliando nuestro catálogo
+            y mejorando cada día nuestro servicio para seguir siendo su primera opción.
+        </p>
+    </div>
+
     <div class="corp-stats">
         <div class="corp-stat">
             <div class="corp-stat-num"><?= $numProductos ?>+</div>
