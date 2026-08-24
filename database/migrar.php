@@ -125,6 +125,10 @@ $migraciones = [
 
     // ── Etiquetas de búsqueda en productos ──
     'productos_etiquetas' => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS etiquetas TEXT DEFAULT '[]'",
+
+    // ── Datos de contacto (footer: botón "Contáctanos") ──
+    'config_contacto_email'   => "ALTER TABLE config ADD COLUMN IF NOT EXISTS contacto_email VARCHAR(150) DEFAULT ''",
+    'config_contacto_celular' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS contacto_celular VARCHAR(20) DEFAULT ''",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

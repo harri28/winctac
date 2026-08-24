@@ -13,7 +13,8 @@ $error   = '';
 // Guardar configuración general
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     $fields = ['nombre_tienda','descripcion','whatsapp_numero','whatsapp_mensaje',
-               'banco_nombre','banco_cuenta','banco_cci','banco_titular'];
+               'banco_nombre','banco_cuenta','banco_cci','banco_titular',
+               'contacto_email','contacto_celular'];
 
     $sets = implode(', ', array_map(fn($f) => "$f = :$f", $fields));
     $params = [];
@@ -113,6 +114,20 @@ if (isset($_GET['ok'])) $success = 'Guardado correctamente.';
             <?php endif; ?>
             <input type="file" name="logo" class="form-control" accept="image/*">
         </div>
+    </div>
+
+    <!-- Contacto (footer: botón "Contáctanos") -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-address-card"></i> Contacto</div>
+        <div class="form-group">
+            <label class="form-label">Correo de contacto</label>
+            <input type="email" name="contacto_email" class="form-control" placeholder="contacto@tutienda.com" value="<?= htmlspecialchars($cfg['contacto_email'] ?? '') ?>">
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Celular de contacto</label>
+            <input type="text" name="contacto_celular" class="form-control" placeholder="999999999" value="<?= htmlspecialchars($cfg['contacto_celular'] ?? '') ?>">
+        </div>
+        <div class="form-hint">Se muestran en el botón "Contáctanos" del pie de página</div>
     </div>
 
     <!-- WhatsApp -->
