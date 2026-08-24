@@ -38,6 +38,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 $cfg = getShopConfig();
 $shopName = htmlspecialchars($cfg['nombre_tienda'] ?? 'Mi Tienda');
+$faviconOk = !empty($cfg['logo_path']) && file_exists(UPLOADS_PATH . '/' . $cfg['logo_path']);
+$faviconTypes = ['svg' => 'image/svg+xml', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg'];
+$faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path'], PATHINFO_EXTENSION))] ?? 'image/jpeg') : '';
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -45,6 +48,9 @@ $shopName = htmlspecialchars($cfg['nombre_tienda'] ?? 'Mi Tienda');
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Login — <?= $shopName ?></title>
+    <?php if ($faviconOk): ?>
+    <link rel="icon" type="<?= $faviconType ?>" href="<?= UPLOADS_URL ?>/<?= htmlspecialchars($cfg['logo_path']) ?>">
+    <?php endif; ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">

@@ -16,3 +16,6 @@ Thumbs.db
 
 # Personal/local Claude Code settings (not shared project config)
 .claude/settings.local.json
+
+# Infra notes referencing a second, unrelated VPS (other clients' projects) — repo is public
+reglas-del-negocio.md

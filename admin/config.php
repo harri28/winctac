@@ -113,6 +113,7 @@ if (isset($_GET['ok'])) $success = 'Guardado correctamente.';
             <div style="margin-bottom:8px"><img src="<?= UPLOADS_URL ?>/<?= htmlspecialchars($cfg['logo_path']) ?>" style="height:40px;border-radius:6px"></div>
             <?php endif; ?>
             <input type="file" name="logo" class="form-control" accept="image/*">
+            <div class="form-hint">Se usa en el login, la tienda y el panel de administración, y también como ícono de la pestaña del navegador (favicon)</div>
         </div>
     </div>
 
