@@ -7,7 +7,9 @@ require_once __DIR__ . '/config/database.php';
 // Cargar banners activos para el slider
 $banners = [];
 try {
-    $banners = getDB()->query("SELECT * FROM banners WHERE activo = TRUE AND (imagen_path IS NOT NULL OR imagen_url IS NOT NULL) ORDER BY orden ASC, id ASC")->fetchAll();
+    $bannersStmt = getDB()->prepare("SELECT * FROM banners WHERE activo = TRUE AND tienda_id = ? AND (imagen_path IS NOT NULL OR imagen_url IS NOT NULL) ORDER BY orden ASC, id ASC");
+    $bannersStmt->execute([TIENDA_ID]);
+    $banners = $bannersStmt->fetchAll();
 } catch (Exception $e) {}
 ?>
 

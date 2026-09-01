@@ -18,15 +18,17 @@ $pdo = getDB();
 // en precio/stock enviados por el navegador.
 function obtenerCatalogo(PDO $pdo): array {
     $imgBase = BASE_URL . '/uploads/productos/';
-    $productos = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT p.id, p.nombre, p.codigo, p.descripcion, p.precio, p.stock,
                p.categoria_id, c.nombre AS categoria, p.etiquetas,
                CASE WHEN p.imagen_path <> '' THEN '$imgBase' || p.imagen_path ELSE NULL END AS imagen
         FROM productos p
         LEFT JOIN categorias c ON c.id = p.categoria_id
-        WHERE p.activo = TRUE
+        WHERE p.activo = TRUE AND p.tienda_id = ?
         ORDER BY p.nombre ASC
-    ")->fetchAll();
+    ");
+    $stmt->execute([TIENDA_ID]);
+    $productos = $stmt->fetchAll();
     // Las etiquetas son uso interno del buscador: nunca se muestran en la UI,
     // pero viajan en el catálogo para que el filtro de búsqueda las revise.
     foreach ($productos as &$p) {
@@ -41,8 +43,9 @@ try {
 
         // ── CATEGORÍAS ──────────────────────────────────────
         case 'categorias':
-            $cats = $pdo->query('SELECT id, nombre FROM categorias WHERE activo = TRUE ORDER BY nombre ASC')->fetchAll();
-            echo json_encode(['success' => true, 'data' => $cats]);
+            $catsStmt = $pdo->prepare('SELECT id, nombre FROM categorias WHERE activo = TRUE AND tienda_id = ? ORDER BY nombre ASC');
+            $catsStmt->execute([TIENDA_ID]);
+            echo json_encode(['success' => true, 'data' => $catsStmt->fetchAll()]);
             break;
 
         // ── PRODUCTOS ───────────────────────────────────────
@@ -209,7 +212,7 @@ try {
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             ');
             // Descuenta stock solo si sigue alcanzando (protege contra dos compras simultáneas del último stock)
-            $descStock = $pdo->prepare('UPDATE productos SET stock = stock - ?, updated_at = NOW() WHERE id = ? AND stock >= ?');
+            $descStock = $pdo->prepare('UPDATE productos SET stock = stock - ?, updated_at = NOW() WHERE id = ? AND stock >= ? AND tienda_id = ?');
             foreach ($items as $i) {
                 $sub = floatval($i['precio']) * intval($i['cantidad']);
                 $insDet->execute([
@@ -217,7 +220,7 @@ try {
                     floatval($i['precio']), intval($i['cantidad']), $sub, $i['imagen'] ?? ''
                 ]);
 
-                $descStock->execute([intval($i['cantidad']), $i['id'], intval($i['cantidad'])]);
+                $descStock->execute([intval($i['cantidad']), $i['id'], intval($i['cantidad']), TIENDA_ID]);
                 if ($descStock->rowCount() === 0) {
                     $pdo->rollBack();
                     echo json_encode(['success' => false, 'error' => 'No hay stock suficiente de "' . $i['nombre'] . '". Otro cliente lo compró recién.']);

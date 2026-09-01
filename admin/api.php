@@ -72,14 +72,14 @@ try {
             $body       = json_decode(file_get_contents('php://input'), true);
             $productoId = intval($body['producto_id'] ?? 0);
             $activo     = ($body['activo'] ?? true) ? 't' : 'f';
-            $pdo->prepare('UPDATE productos SET activo = ?, updated_at = NOW() WHERE id = ?')->execute([$activo, $productoId]);
+            $pdo->prepare('UPDATE productos SET activo = ?, updated_at = NOW() WHERE id = ? AND tienda_id = ?')->execute([$activo, $productoId, TIENDA_ID]);
             echo json_encode(['success' => true]);
             break;
 
         case 'toggle_todos':
             $body   = json_decode(file_get_contents('php://input'), true);
             $activo = ($body['activo'] ?? true) ? 't' : 'f';
-            $pdo->prepare('UPDATE productos SET activo = ?, updated_at = NOW()')->execute([$activo]);
+            $pdo->prepare('UPDATE productos SET activo = ?, updated_at = NOW() WHERE tienda_id = ?')->execute([$activo, TIENDA_ID]);
             echo json_encode(['success' => true]);
             break;
 
@@ -130,30 +130,30 @@ try {
 
             if ($productoId) {
                 if ($imagenPath !== null) {
-                    $prev = $pdo->prepare('SELECT imagen_path FROM productos WHERE id = ?');
-                    $prev->execute([$productoId]);
+                    $prev = $pdo->prepare('SELECT imagen_path FROM productos WHERE id = ? AND tienda_id = ?');
+                    $prev->execute([$productoId, TIENDA_ID]);
                     $prevPath = $prev->fetchColumn();
                     if ($prevPath && file_exists(UPLOADS_PATH . '/productos/' . $prevPath)) {
                         @unlink(UPLOADS_PATH . '/productos/' . $prevPath);
                     }
                     $pdo->prepare('
                         UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, imagen_path=?, etiquetas=?, updated_at=NOW()
-                        WHERE id=?
-                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath, $etiquetasJson, $productoId]);
+                        WHERE id=? AND tienda_id=?
+                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath, $etiquetasJson, $productoId, TIENDA_ID]);
                 } else {
                     $pdo->prepare('
                         UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, etiquetas=?, updated_at=NOW()
-                        WHERE id=?
-                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $etiquetasJson, $productoId]);
+                        WHERE id=? AND tienda_id=?
+                    ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $etiquetasJson, $productoId, TIENDA_ID]);
                 }
                 echo json_encode(['success' => true, 'id' => $productoId]);
             } else {
                 $ins = $pdo->prepare('
-                    INSERT INTO productos (nombre, codigo, descripcion, precio, stock, categoria_id, activo, imagen_path, etiquetas)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO productos (tienda_id, nombre, codigo, descripcion, precio, stock, categoria_id, activo, imagen_path, etiquetas)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING id
                 ');
-                $ins->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath ?? '', $etiquetasJson]);
+                $ins->execute([TIENDA_ID, $nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath ?? '', $etiquetasJson]);
                 echo json_encode(['success' => true, 'id' => $ins->fetchColumn()]);
             }
             break;
@@ -161,10 +161,10 @@ try {
         case 'eliminar_producto':
             $body       = json_decode(file_get_contents('php://input'), true);
             $productoId = intval($body['id'] ?? 0);
-            $row = $pdo->prepare('SELECT imagen_path FROM productos WHERE id = ?');
-            $row->execute([$productoId]);
+            $row = $pdo->prepare('SELECT imagen_path FROM productos WHERE id = ? AND tienda_id = ?');
+            $row->execute([$productoId, TIENDA_ID]);
             $imgPath = $row->fetchColumn();
-            $pdo->prepare('DELETE FROM productos WHERE id = ?')->execute([$productoId]);
+            $pdo->prepare('DELETE FROM productos WHERE id = ? AND tienda_id = ?')->execute([$productoId, TIENDA_ID]);
             if ($imgPath && file_exists(UPLOADS_PATH . '/productos/' . $imgPath)) {
                 @unlink(UPLOADS_PATH . '/productos/' . $imgPath);
             }
@@ -174,7 +174,9 @@ try {
         // Lista de etiquetas ya usadas en cualquier producto, para autocompletado
         // en el input de etiquetas (estilo sugerencias de hashtags).
         case 'etiquetas_sugeridas':
-            $rows = $pdo->query("SELECT etiquetas FROM productos WHERE etiquetas IS NOT NULL AND etiquetas != '[]'")->fetchAll(PDO::FETCH_COLUMN);
+            $etStmt = $pdo->prepare("SELECT etiquetas FROM productos WHERE etiquetas IS NOT NULL AND etiquetas != '[]' AND tienda_id = ?");
+            $etStmt->execute([TIENDA_ID]);
+            $rows = $etStmt->fetchAll(PDO::FETCH_COLUMN);
             $vistas = [];
             foreach ($rows as $json) {
                 $arr = json_decode($json, true);
@@ -196,14 +198,14 @@ try {
             $nombre = trim($body['nombre'] ?? '');
             if (!$nombre) { echo json_encode(['success' => false, 'error' => 'El nombre es requerido']); break; }
 
-            $dup = $pdo->prepare('SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?)');
-            $dup->execute([$nombre]);
+            $dup = $pdo->prepare('SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?) AND tienda_id = ?');
+            $dup->execute([$nombre, TIENDA_ID]);
             if ($dup->fetch()) {
                 echo json_encode(['success' => false, 'error' => 'Ya existe una categoría con ese nombre']); break;
             }
 
-            $ins = $pdo->prepare('INSERT INTO categorias (nombre, activo) VALUES (?, TRUE) RETURNING id');
-            $ins->execute([$nombre]);
+            $ins = $pdo->prepare('INSERT INTO categorias (tienda_id, nombre, activo) VALUES (?, ?, TRUE) RETURNING id');
+            $ins->execute([TIENDA_ID, $nombre]);
             echo json_encode(['success' => true, 'id' => $ins->fetchColumn(), 'nombre' => $nombre]);
             break;
 

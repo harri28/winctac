@@ -19,9 +19,9 @@ $stmt = $pdo->prepare("
            CASE WHEN p.imagen_path <> '' THEN '$imgBase' || p.imagen_path ELSE NULL END AS imagen
     FROM productos p
     LEFT JOIN categorias c ON c.id = p.categoria_id
-    WHERE p.id = ? AND p.activo = TRUE
+    WHERE p.id = ? AND p.activo = TRUE AND p.tienda_id = ?
 ");
-$stmt->execute([$id]);
+$stmt->execute([$id, TIENDA_ID]);
 $producto = $stmt->fetch();
 
 if (!$producto) { header('Location: ' . BASE_URL . '/'); exit; }

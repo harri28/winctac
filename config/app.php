@@ -20,7 +20,12 @@ $host = preg_replace('/:\d+$/', '', $host); // quita el puerto, si viene (ej. lo
 if (in_array($host, ['127.0.0.1', '::1'], true)) {
     $host = 'localhost';
 }
-$basePath = '/ecomerce';
+// Multi-tenant: cada tienda vive en su propio dominio en la raíz (sin
+// subcarpeta), salvo el entorno local XAMPP que sigue sirviéndose bajo
+// /ecomerce. No depende de una variable de entorno fija por proceso —
+// eso rompería en un pool de PHP-FPM compartido entre varias tiendas
+// (cada una necesita su propia URL base, resuelta de su propio Host).
+$basePath = ($host === 'localhost') ? '/ecomerce' : '';
 $baseUrl = getenv('ECOMMERCE_BASE_URL');
 if ($baseUrl === false) {
     $baseUrl = $scheme . '://' . $host . $basePath;

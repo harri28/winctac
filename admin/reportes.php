@@ -141,10 +141,12 @@ if ($tab === 'resumen') {
     $c->execute([$desde, $hastaExcl]);
     $data['por_categoria'] = $c->fetchAll();
 
-    $data['stock_bajo'] = $pdo->query("
+    $stockBajoStmt = $pdo->prepare("
         SELECT nombre, codigo, stock FROM productos
-        WHERE activo = TRUE AND stock <= 5 ORDER BY stock ASC
-    ")->fetchAll();
+        WHERE activo = TRUE AND stock <= 5 AND tienda_id = ? ORDER BY stock ASC
+    ");
+    $stockBajoStmt->execute([TIENDA_ID]);
+    $data['stock_bajo'] = $stockBajoStmt->fetchAll();
 
 } elseif ($tab === 'clientes') {
     $c = $pdo->prepare("

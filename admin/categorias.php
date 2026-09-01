@@ -16,15 +16,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_categoria'])) {
     if (!$nombre) {
         $error = 'El nombre es requerido.';
     } else {
-        $dup = $pdo->prepare('SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?) AND id != ?');
-        $dup->execute([$nombre, $id]);
+        $dup = $pdo->prepare('SELECT id FROM categorias WHERE LOWER(nombre) = LOWER(?) AND id != ? AND tienda_id = ?');
+        $dup->execute([$nombre, $id, TIENDA_ID]);
         if ($dup->fetch()) {
             $error = 'Ya existe una categoría con ese nombre.';
         } elseif ($id) {
-            $pdo->prepare('UPDATE categorias SET nombre = ?, activo = ? WHERE id = ?')->execute([$nombre, $activo, $id]);
+            $pdo->prepare('UPDATE categorias SET nombre = ?, activo = ? WHERE id = ? AND tienda_id = ?')->execute([$nombre, $activo, $id, TIENDA_ID]);
             $success = 'Categoría actualizada.';
         } else {
-            $pdo->prepare('INSERT INTO categorias (nombre, activo) VALUES (?, ?)')->execute([$nombre, $activo]);
+            $pdo->prepare('INSERT INTO categorias (tienda_id, nombre, activo) VALUES (?, ?, ?)')->execute([TIENDA_ID, $nombre, $activo]);
             $success = 'Categoría creada.';
         }
     }
@@ -33,12 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_categoria'])) {
 // Eliminar categoría (bloqueado si tiene productos)
 if (!empty($_GET['del']) && is_numeric($_GET['del'])) {
     $id = intval($_GET['del']);
-    $total = $pdo->prepare('SELECT COUNT(*) FROM productos WHERE categoria_id = ?');
-    $total->execute([$id]);
+    $total = $pdo->prepare('SELECT COUNT(*) FROM productos WHERE categoria_id = ? AND tienda_id = ?');
+    $total->execute([$id, TIENDA_ID]);
     if ($total->fetchColumn() > 0) {
         $error = 'No se puede eliminar: hay productos usando esta categoría.';
     } else {
-        $pdo->prepare('DELETE FROM categorias WHERE id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM categorias WHERE id = ? AND tienda_id = ?')->execute([$id, TIENDA_ID]);
         header('Location: ' . BASE_URL . '/admin/categorias.php?ok=1');
         exit;
     }
@@ -46,13 +46,16 @@ if (!empty($_GET['del']) && is_numeric($_GET['del'])) {
 
 if (isset($_GET['ok'])) $success = 'Categoría eliminada.';
 
-$categorias = $pdo->query('
+$categoriasStmt = $pdo->prepare('
     SELECT c.*, COUNT(p.id) AS total_productos
     FROM categorias c
-    LEFT JOIN productos p ON p.categoria_id = c.id
+    LEFT JOIN productos p ON p.categoria_id = c.id AND p.tienda_id = c.tienda_id
+    WHERE c.tienda_id = ?
     GROUP BY c.id
     ORDER BY c.nombre ASC
-')->fetchAll();
+');
+$categoriasStmt->execute([TIENDA_ID]);
+$categorias = $categoriasStmt->fetchAll();
 ?>
 
 <div class="admin-topbar">

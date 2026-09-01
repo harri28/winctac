@@ -165,6 +165,24 @@ $migraciones = [
 
     // ── Color de marca por tienda ──
     'config_color_primary' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS color_primary VARCHAR(7) DEFAULT '#dc2626'",
+
+    // ── Multi-tenant Fase 1: catálogo (productos/categorías/banners) por tienda ──
+    'categorias_tienda_id'          => "ALTER TABLE categorias ADD COLUMN IF NOT EXISTS tienda_id INTEGER",
+    'categorias_tienda_id_backfill' => "UPDATE categorias SET tienda_id = 1 WHERE tienda_id IS NULL",
+    'categorias_tienda_id_notnull'  => "ALTER TABLE categorias ALTER COLUMN tienda_id SET NOT NULL",
+    'categorias_tienda_fk'          => "ALTER TABLE categorias ADD CONSTRAINT categorias_tienda_id_fkey FOREIGN KEY (tienda_id) REFERENCES tiendas(id)",
+    'categorias_drop_nombre_unique' => "ALTER TABLE categorias DROP CONSTRAINT IF EXISTS categorias_nombre_key",
+    'categorias_tienda_nombre_unique' => "ALTER TABLE categorias ADD CONSTRAINT categorias_tienda_id_nombre_key UNIQUE (tienda_id, nombre)",
+
+    'productos_tienda_id'          => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS tienda_id INTEGER",
+    'productos_tienda_id_backfill' => "UPDATE productos SET tienda_id = 1 WHERE tienda_id IS NULL",
+    'productos_tienda_id_notnull'  => "ALTER TABLE productos ALTER COLUMN tienda_id SET NOT NULL",
+    'productos_tienda_fk'          => "ALTER TABLE productos ADD CONSTRAINT productos_tienda_id_fkey FOREIGN KEY (tienda_id) REFERENCES tiendas(id)",
+
+    'banners_tienda_id'          => "ALTER TABLE banners ADD COLUMN IF NOT EXISTS tienda_id INTEGER",
+    'banners_tienda_id_backfill' => "UPDATE banners SET tienda_id = 1 WHERE tienda_id IS NULL",
+    'banners_tienda_id_notnull'  => "ALTER TABLE banners ALTER COLUMN tienda_id SET NOT NULL",
+    'banners_tienda_fk'          => "ALTER TABLE banners ADD CONSTRAINT banners_tienda_id_fkey FOREIGN KEY (tienda_id) REFERENCES tiendas(id)",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

@@ -109,17 +109,20 @@ CREATE TABLE IF NOT EXISTS productos_override (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Categorías locales del catálogo propio
+-- Categorías locales del catálogo propio (por tienda)
 CREATE TABLE IF NOT EXISTS categorias (
     id SERIAL PRIMARY KEY,
-    nombre VARCHAR(150) UNIQUE NOT NULL,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+    nombre VARCHAR(150) NOT NULL,
     activo BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(tienda_id, nombre)
 );
 
--- Catálogo propio de productos (independiente de sistemas externos)
+-- Catálogo propio de productos (independiente de sistemas externos, por tienda)
 CREATE TABLE IF NOT EXISTS productos (
     id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
     nombre VARCHAR(200) NOT NULL,
     codigo VARCHAR(50) DEFAULT '',
     descripcion TEXT DEFAULT '',
@@ -187,9 +190,10 @@ CREATE TABLE IF NOT EXISTS login_intentos (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Banners del slider de inicio
+-- Banners del slider de inicio (por tienda)
 CREATE TABLE IF NOT EXISTS banners (
     id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
     imagen_path TEXT NOT NULL,
     titulo VARCHAR(200) DEFAULT '',
     subtitulo VARCHAR(300) DEFAULT '',

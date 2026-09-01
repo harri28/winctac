@@ -22,13 +22,16 @@ try { $pdo->exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS imagen_url TEXT D
 try { $pdo->exec("ALTER TABLE banners ADD COLUMN IF NOT EXISTS producto_id INTEGER DEFAULT NULL"); } catch (Exception $e) {}
 try { $pdo->exec("ALTER TABLE banners ALTER COLUMN imagen_path DROP NOT NULL"); } catch (Exception $e) {}
 
-// Normalizar a exactamente 6 slots con orden 1..6 (sin duplicados).
+// Normalizar a exactamente 6 slots con orden 1..6 (sin duplicados), por tienda.
 // Prioriza filas con contenido real; renumera huecos y elimina sobrantes vacíos.
-$rows = $pdo->query("
+$rowsStmt = $pdo->prepare("
     SELECT id, orden, imagen_path, imagen_url, titulo
     FROM banners
+    WHERE tienda_id = ?
     ORDER BY (imagen_path IS NOT NULL OR imagen_url IS NOT NULL OR titulo <> '') DESC, orden ASC, id ASC
-")->fetchAll();
+");
+$rowsStmt->execute([TIENDA_ID]);
+$rows = $rowsStmt->fetchAll();
 
 $total = count($rows);
 foreach ($rows as $i => $r) {
@@ -44,8 +47,8 @@ foreach ($rows as $i => $r) {
 }
 
 for ($i = min($total, 6) + 1; $i <= 6; $i++) {
-    $pdo->prepare("INSERT INTO banners (imagen_path, imagen_url, titulo, subtitulo, enlace, orden, activo) VALUES (NULL, NULL, '', '', '', ?, TRUE)")
-        ->execute([$i]);
+    $pdo->prepare("INSERT INTO banners (tienda_id, imagen_path, imagen_url, titulo, subtitulo, enlace, orden, activo) VALUES (?, NULL, NULL, '', '', '', ?, TRUE)")
+        ->execute([TIENDA_ID, $i]);
 }
 
 // Guardar slot
@@ -60,8 +63,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['banner_id'])) {
     $activo      = isset($_POST['activo']) ? 't' : 'f';
 
     // Mantener imagen actual si no se sube una nueva
-    $curr  = $pdo->prepare('SELECT imagen_path FROM banners WHERE id = ?');
-    $curr->execute([$id]);
+    $curr  = $pdo->prepare('SELECT imagen_path FROM banners WHERE id = ? AND tienda_id = ?');
+    $curr->execute([$id, TIENDA_ID]);
     $fname = ($curr->fetch())['imagen_path'] ?? null;
 
     if (!empty($_FILES['banner_img']['tmp_name'])) {
@@ -78,22 +81,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['banner_id'])) {
     }
 
     if (!$error) {
-        $pdo->prepare('UPDATE banners SET imagen_path=?, imagen_url=?, titulo=?, subtitulo=?, enlace=?, producto_id=?, activo=? WHERE id=?')
-            ->execute([$fname ?: null, $imagen_url ?: null, $titulo, $subtitulo, $enlace, $producto_id, $activo, $id]);
+        $pdo->prepare('UPDATE banners SET imagen_path=?, imagen_url=?, titulo=?, subtitulo=?, enlace=?, producto_id=?, activo=? WHERE id=? AND tienda_id=?')
+            ->execute([$fname ?: null, $imagen_url ?: null, $titulo, $subtitulo, $enlace, $producto_id, $activo, $id, TIENDA_ID]);
         $success = "Banner $slot_num guardado correctamente.";
     }
 }
 
 // Limpiar slot
 if (!empty($_GET['clear']) && is_numeric($_GET['clear'])) {
-    $row = $pdo->prepare('SELECT imagen_path FROM banners WHERE id = ?');
-    $row->execute([intval($_GET['clear'])]);
+    $row = $pdo->prepare('SELECT imagen_path FROM banners WHERE id = ? AND tienda_id = ?');
+    $row->execute([intval($_GET['clear']), TIENDA_ID]);
     $b = $row->fetch();
     if ($b && $b['imagen_path'] && file_exists(UPLOADS_PATH . '/' . $b['imagen_path'])) {
         @unlink(UPLOADS_PATH . '/' . $b['imagen_path']);
     }
-    $pdo->prepare("UPDATE banners SET imagen_path=NULL, imagen_url=NULL, titulo='', subtitulo='', enlace='', producto_id=NULL WHERE id=?")
-        ->execute([intval($_GET['clear'])]);
+    $pdo->prepare("UPDATE banners SET imagen_path=NULL, imagen_url=NULL, titulo='', subtitulo='', enlace='', producto_id=NULL WHERE id=? AND tienda_id=?")
+        ->execute([intval($_GET['clear']), TIENDA_ID]);
     header('Location: ' . BASE_URL . '/admin/banners.php?ok=1'); exit;
 }
 
@@ -103,7 +106,9 @@ elseif (isset($_GET['ok'])) $success = 'Cambio guardado.';
 $cfgStmt = $pdo->prepare('SELECT * FROM config WHERE id = ?');
 $cfgStmt->execute([TIENDA_ID]);
 $cfg     = $cfgStmt->fetch();
-$banners = $pdo->query('SELECT * FROM banners ORDER BY orden ASC LIMIT 6')->fetchAll();
+$bannersStmt = $pdo->prepare('SELECT * FROM banners WHERE tienda_id = ? ORDER BY orden ASC LIMIT 6');
+$bannersStmt->execute([TIENDA_ID]);
+$banners = $bannersStmt->fetchAll();
 ?>
 
 <div class="admin-topbar">

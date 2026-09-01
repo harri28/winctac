@@ -71,7 +71,12 @@
       "PowerShell(ipconfig /flushdns)",
       "Bash(nslookup -type=SOA genpharma.shop 8.8.8.8)",
       "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"UPDATE config SET color_primary='#2563eb' WHERE id=1;\")",
-      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"UPDATE config SET color_primary='#dc2626' WHERE id=1;\")"
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"UPDATE config SET color_primary='#dc2626' WHERE id=1;\")",
+      "Bash(nslookup -type=NS genpharma.shop 1.1.1.1)",
+      "PowerShell(Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object Name, InterfaceIndex)",
+      "Bash(nslookup genpharma.shop 9.9.9.9)",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"DELETE FROM categorias WHERE id = 9 AND tienda_id = \\(SELECT id FROM tiendas WHERE hostname='genpharma.wintac'\\);\")",
+      "Bash(/c/xampp/php/php.exe -l config/app.php)"
     ],
     "additionalDirectories": [
       "C:\\Users\\harri\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-ecomerce\\a8fac820-228b-447a-bae1-ca2d9f6753a2\\scratchpad",

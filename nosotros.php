@@ -8,8 +8,13 @@ $cfg      = getShopConfig();
 $shopName = htmlspecialchars($cfg['nombre_tienda'] ?? 'Mi Tienda Online');
 $pdo      = getDB();
 
-$numProductos  = (int) $pdo->query("SELECT COUNT(*) FROM productos WHERE activo = TRUE")->fetchColumn();
-$numCategorias = (int) $pdo->query("SELECT COUNT(*) FROM categorias WHERE activo = TRUE")->fetchColumn();
+$numProdStmt = $pdo->prepare("SELECT COUNT(*) FROM productos WHERE activo = TRUE AND tienda_id = ?");
+$numProdStmt->execute([TIENDA_ID]);
+$numProductos = (int) $numProdStmt->fetchColumn();
+
+$numCatStmt = $pdo->prepare("SELECT COUNT(*) FROM categorias WHERE activo = TRUE AND tienda_id = ?");
+$numCatStmt->execute([TIENDA_ID]);
+$numCategorias = (int) $numCatStmt->fetchColumn();
 $numEnvios     = (int) $pdo->query("SELECT COUNT(*) FROM empresas_envio WHERE activo = TRUE")->fetchColumn();
 
 $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' . $cfg['portal_hero_path']))

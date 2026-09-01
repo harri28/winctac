@@ -5,14 +5,19 @@ require_once __DIR__ . '/includes/header.php';
 
 $pdo = getDB();
 
-$productos = $pdo->query("
+$productosStmt = $pdo->prepare("
     SELECT p.*, c.nombre AS categoria
     FROM productos p
     LEFT JOIN categorias c ON c.id = p.categoria_id
+    WHERE p.tienda_id = ?
     ORDER BY p.nombre ASC
-")->fetchAll();
+");
+$productosStmt->execute([TIENDA_ID]);
+$productos = $productosStmt->fetchAll();
 
-$categorias = $pdo->query('SELECT id, nombre FROM categorias ORDER BY nombre ASC')->fetchAll();
+$categoriasStmt = $pdo->prepare('SELECT id, nombre FROM categorias WHERE tienda_id = ? ORDER BY nombre ASC');
+$categoriasStmt->execute([TIENDA_ID]);
+$categorias = $categoriasStmt->fetchAll();
 
 $totalActivos  = count(array_filter($productos, fn($p) => $p['activo']));
 $totalInactivos = count($productos) - $totalActivos;
