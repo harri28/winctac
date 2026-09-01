@@ -162,6 +162,9 @@ $migraciones = [
 
     // ── Portal Web: imagen de portada de la página "Nosotros" ──
     'config_portal_hero_path' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_hero_path TEXT DEFAULT ''",
+
+    // ── Color de marca por tienda ──
+    'config_color_primary' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS color_primary VARCHAR(7) DEFAULT '#dc2626'",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

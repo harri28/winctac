@@ -16,7 +16,7 @@ $error   = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     $fields = ['nombre_tienda','descripcion','whatsapp_numero','whatsapp_mensaje',
                'banco_nombre','banco_cuenta','banco_cci','banco_titular',
-               'contacto_email','contacto_celular'];
+               'contacto_email','contacto_celular','color_primary'];
 
     $sets = implode(', ', array_map(fn($f) => "$f = :$f", $fields));
     $params = [];
@@ -117,6 +117,11 @@ if (isset($_GET['ok'])) $success = 'Guardado correctamente.';
             <?php endif; ?>
             <input type="file" name="logo" class="form-control" accept="image/*">
             <div class="form-hint">Se usa en el login, la tienda y el panel de administración, y también como ícono de la pestaña del navegador (favicon)</div>
+        </div>
+        <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Color de marca</label>
+            <input type="color" name="color_primary" value="<?= htmlspecialchars($cfg['color_primary'] ?? '#dc2626') ?>" style="width:70px;height:38px;padding:2px;cursor:pointer">
+            <div class="form-hint">Se aplica en toda la tienda, el login y el panel de administración</div>
         </div>
     </div>
 

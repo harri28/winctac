@@ -67,6 +67,32 @@ function generarCodigoPedidoUnico(PDO $pdo): string {
     return $codigo;
 }
 
+// Aclara (percent > 0) u oscurece (percent < 0) un color hex, mezclándolo
+// hacia blanco/negro — usado para derivar --primary-dark/-light/-bg del
+// color de marca que cada tienda elige en Configuración.
+function shadeColor(string $hex, float $percent): string {
+    $hex = ltrim($hex, '#');
+    if (!preg_match('/^[0-9a-fA-F]{6}$/', $hex)) return '#dc2626';
+    $rgb = [];
+    for ($i = 0; $i < 3; $i++) {
+        $c = hexdec(substr($hex, $i * 2, 2));
+        $c = $percent >= 0 ? $c + (255 - $c) * $percent : $c + $c * $percent;
+        $rgb[] = str_pad(dechex((int) round(max(0, min(255, $c)))), 2, '0', STR_PAD_LEFT);
+    }
+    return '#' . implode('', $rgb);
+}
+
+// Bloque <style> que sobreescribe el color de marca de style.css para esta
+// tienda — se imprime después del <link> a style.css en cada <head>.
+function brandColorStyleTag(array $cfg): string {
+    $base = $cfg['color_primary'] ?? '#dc2626';
+    if (!preg_match('/^#[0-9a-fA-F]{6}$/', $base)) $base = '#dc2626';
+    $dark  = shadeColor($base, -0.2);
+    $light = shadeColor($base, 0.15);
+    $bg    = shadeColor($base, 0.94);
+    return "<style>:root{--primary:$base;--primary-dark:$dark;--primary-light:$light;--primary-bg:$bg;}</style>";
+}
+
 // Config de la tienda cacheada
 function getShopConfig(): array {
     static $cfg = null;

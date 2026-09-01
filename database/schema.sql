@@ -141,6 +141,7 @@ CREATE TABLE IF NOT EXISTS config (
     nombre_tienda VARCHAR(200) DEFAULT 'Mi Tienda Online',
     descripcion TEXT DEFAULT '',
     logo_path TEXT DEFAULT '',
+    color_primary VARCHAR(7) DEFAULT '#dc2626',
     -- Franja de anuncio sobre el header
     anuncio_texto TEXT DEFAULT '',
     anuncio_activo BOOLEAN DEFAULT FALSE,

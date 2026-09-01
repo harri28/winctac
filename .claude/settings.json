@@ -60,10 +60,22 @@
       "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT * FROM tiendas;\")",
       "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT id, tienda_id, email FROM admin_usuarios;\")",
       "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT id FROM config;\")",
-      "Bash(git commit -m ' *)"
+      "Bash(git commit -m ' *)",
+      "Read(//c/Windows/System32/drivers/etc/**)",
+      "Bash(powershell -Command \"Get-Content 'C:\\\\Windows\\\\System32\\\\drivers\\\\etc\\\\hosts' | Select-Object -Last 3\")",
+      "Bash(nslookup genpharma.shop)",
+      "Bash(nslookup genpharma.shop 8.8.8.8)",
+      "Bash(nslookup -type=NS genpharma.shop 8.8.8.8)",
+      "Bash(nslookup -type=NS wintac.shop 8.8.8.8)",
+      "Bash(nslookup genpharma.shop 1.1.1.1)",
+      "PowerShell(ipconfig /flushdns)",
+      "Bash(nslookup -type=SOA genpharma.shop 8.8.8.8)",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"UPDATE config SET color_primary='#2563eb' WHERE id=1;\")",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"UPDATE config SET color_primary='#dc2626' WHERE id=1;\")"
     ],
     "additionalDirectories": [
-      "C:\\Users\\harri\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-ecomerce\\a8fac820-228b-447a-bae1-ca2d9f6753a2\\scratchpad"
+      "C:\\Users\\harri\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-ecomerce\\a8fac820-228b-447a-bae1-ca2d9f6753a2\\scratchpad",
+      "C:\\Windows\\System32\\drivers\\etc"
     ]
   }
 }
