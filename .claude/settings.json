@@ -76,7 +76,16 @@
       "PowerShell(Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Select-Object Name, InterfaceIndex)",
       "Bash(nslookup genpharma.shop 9.9.9.9)",
       "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"DELETE FROM categorias WHERE id = 9 AND tienda_id = \\(SELECT id FROM tiendas WHERE hostname='genpharma.wintac'\\);\")",
-      "Bash(/c/xampp/php/php.exe -l config/app.php)"
+      "Bash(/c/xampp/php/php.exe -l config/app.php)",
+      "Bash(python -c \"import openpyxl; print\\('openpyxl ok'\\)\")",
+      "Bash(python -c \"import pandas; print\\('pandas ok'\\)\")",
+      "Bash(python -c ' *)",
+      "Bash(/c/xampp/php/php.exe \"C:\\\\Users\\\\harri\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--xampp-htdocs-ecomerce\\\\ec01f362-b9df-4aa4-b004-4d9959a931e0\\\\scratchpad\\\\generar_import_genpharma.php\")",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT id, tienda_id, nombre FROM categorias WHERE tienda_id=3;\")",
+      "Bash(export PGCLIENTENCODING=UTF8)",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT COUNT\\(*\\) AS total, COUNT\\(categoria_id\\) AS con_categoria FROM productos WHERE tienda_id=3;\")",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT nombre FROM productos WHERE tienda_id=3 AND nombre LIKE '%PANTENE%';\")",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"DELETE FROM productos WHERE tienda_id=3; DELETE FROM categorias WHERE tienda_id=3;\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\harri\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-ecomerce\\a8fac820-228b-447a-bae1-ca2d9f6753a2\\scratchpad",
