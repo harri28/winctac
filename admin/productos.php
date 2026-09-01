@@ -217,6 +217,12 @@ $totalInactivos = count($productos) - $totalActivos;
             <div class="form-hint">JPG, PNG, WEBP — Recomendado: 400×400px</div>
         </div>
 
+        <div id="qr-section" class="form-group" style="display:none;text-align:center;padding:14px;background:var(--surface-3);border-radius:var(--radius)">
+            <label class="form-label">Código QR del producto</label>
+            <img id="qr-img" src="" alt="QR del producto" style="width:120px;height:120px;background:#fff;border-radius:8px;padding:6px">
+            <div class="form-hint">Enlaza directo a la página pública del producto — útil para imprimir en etiquetas/empaques</div>
+        </div>
+
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:16px">
             <input type="checkbox" id="f-activo" checked>
             Mostrar en la tienda
@@ -342,6 +348,7 @@ function abrirNuevo() {
     document.getElementById('f-activo').checked = true;
     document.getElementById('modal-img-preview').innerHTML = '<i class="fas fa-image fa-2x"></i>';
     document.getElementById('modal-msg').style.display = 'none';
+    document.getElementById('qr-section').style.display = 'none';
     tagsActuales = [];
     renderTags();
     cerrarNuevaCategoria();
@@ -370,6 +377,10 @@ function abrirEditar(p) {
     try { tagsActuales = JSON.parse(p.etiquetas || '[]'); } catch (e) { tagsActuales = []; }
     if (!Array.isArray(tagsActuales)) tagsActuales = [];
     renderTags();
+
+    const productoUrl = window.BASE_URL + '/producto.php?id=' + p.id;
+    document.getElementById('qr-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(productoUrl);
+    document.getElementById('qr-section').style.display = 'block';
 
     cerrarNuevaCategoria();
     document.getElementById('modal-producto').style.display = 'flex';
