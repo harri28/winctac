@@ -5,7 +5,9 @@ require_once __DIR__ . '/includes/header.php';
 
 
 $pdo = getDB();
-$cfg = $pdo->query('SELECT * FROM config WHERE id = 1')->fetch();
+$cfgStmt = $pdo->prepare('SELECT * FROM config WHERE id = ?');
+$cfgStmt->execute([TIENDA_ID]);
+$cfg = $cfgStmt->fetch();
 $empresas = $pdo->query('SELECT * FROM empresas_envio ORDER BY id')->fetchAll();
 $success = '';
 $error   = '';
@@ -48,9 +50,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
         }
     }
 
-    $params['__id'] = 1;
+    $params['__id'] = TIENDA_ID;
     $pdo->prepare("UPDATE config SET $sets, updated_at = NOW() WHERE id = :__id")->execute($params);
-    $cfg = $pdo->query('SELECT * FROM config WHERE id = 1')->fetch();
+    $cfgStmt->execute([TIENDA_ID]);
+    $cfg = $cfgStmt->fetch();
     $success = 'Configuración guardada correctamente.';
 }
 

@@ -13,13 +13,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_puntos'])) {
     if ($porSol < 0) {
         $error = 'El ratio de puntos no puede ser negativo.';
     } else {
-        $pdo->prepare('UPDATE config SET puntos_activo = ?, puntos_por_sol = ?, updated_at = NOW() WHERE id = 1')
-            ->execute([$activo, $porSol]);
+        $pdo->prepare('UPDATE config SET puntos_activo = ?, puntos_por_sol = ?, updated_at = NOW() WHERE id = ?')
+            ->execute([$activo, $porSol, TIENDA_ID]);
         $success = 'Configuración de puntos guardada.';
     }
 }
 
-$cfg = $pdo->query('SELECT puntos_activo, puntos_por_sol FROM config WHERE id = 1')->fetch();
+$cfgStmt = $pdo->prepare('SELECT puntos_activo, puntos_por_sol FROM config WHERE id = ?');
+$cfgStmt->execute([TIENDA_ID]);
+$cfg = $cfgStmt->fetch();
 ?>
 
 <div class="admin-topbar">

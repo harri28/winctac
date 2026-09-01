@@ -18,7 +18,37 @@ a{color:#dc2626}
 <h1>Migraciones — Selvadigital</h1>';
 
 $pdo = getDB();
+
+// ── Multi-tenant: crear la tabla de tiendas y sembrar la tienda de ESTE
+// hostname con id=1, antes de que las demás migraciones (que asumen que
+// tiendas.id=1 ya existe) intenten referenciarla. Va aparte del array de
+// abajo porque necesita un parámetro ($host), no solo SQL fijo.
+try {
+    $pdo->exec("CREATE TABLE IF NOT EXISTS tiendas (
+        id SERIAL PRIMARY KEY,
+        slug VARCHAR(100) UNIQUE NOT NULL,
+        hostname VARCHAR(255) UNIQUE NOT NULL,
+        activo BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+    )");
+    $seed = $pdo->prepare("INSERT INTO tiendas (id, slug, hostname) VALUES (1, 'default', ?) ON CONFLICT (id) DO NOTHING");
+    $seed->execute([$host]);
+    $pdo->exec("SELECT setval(pg_get_serial_sequence('tiendas','id'), (SELECT COALESCE(MAX(id), 1) FROM tiendas))");
+    echo '<div class="ok">✓ <strong>tiendas_table</strong> aplicada correctamente</div>';
+} catch (PDOException $e) {
+    echo '<div class="err">✗ <strong>tiendas_table</strong>: ' . htmlspecialchars($e->getMessage()) . '</div>';
+}
+
 $migraciones = [
+    'admin_usuarios_tienda_id'          => "ALTER TABLE admin_usuarios ADD COLUMN IF NOT EXISTS tienda_id INTEGER",
+    'admin_usuarios_tienda_id_backfill' => "UPDATE admin_usuarios SET tienda_id = 1 WHERE tienda_id IS NULL",
+    'admin_usuarios_tienda_id_notnull'  => "ALTER TABLE admin_usuarios ALTER COLUMN tienda_id SET NOT NULL",
+    'admin_usuarios_tienda_fk'          => "ALTER TABLE admin_usuarios ADD CONSTRAINT admin_usuarios_tienda_id_fkey FOREIGN KEY (tienda_id) REFERENCES tiendas(id)",
+    'admin_usuarios_drop_email_unique'  => "ALTER TABLE admin_usuarios DROP CONSTRAINT IF EXISTS admin_usuarios_email_key",
+    'admin_usuarios_tienda_email_unique' => "ALTER TABLE admin_usuarios ADD CONSTRAINT admin_usuarios_tienda_id_email_key UNIQUE (tienda_id, email)",
+    'config_tienda_fk'                  => "ALTER TABLE config ADD CONSTRAINT config_id_fkey FOREIGN KEY (id) REFERENCES tiendas(id)",
+    'config_id_drop_default'            => "ALTER TABLE config ALTER COLUMN id DROP DEFAULT",
+
     'banners_table' => "CREATE TABLE IF NOT EXISTS banners (
         id SERIAL PRIMARY KEY,
         imagen_path TEXT NOT NULL,

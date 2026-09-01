@@ -4,7 +4,9 @@ $adminTitle = 'Portal Web';
 require_once __DIR__ . '/includes/header.php';
 
 $pdo = getDB();
-$cfg = $pdo->query('SELECT * FROM config WHERE id = 1')->fetch();
+$cfgStmt = $pdo->prepare('SELECT * FROM config WHERE id = ?');
+$cfgStmt->execute([TIENDA_ID]);
+$cfg = $cfgStmt->fetch();
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
@@ -15,9 +17,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
             $dest  = UPLOADS_PATH . '/' . $fname;
             if (!is_dir(UPLOADS_PATH)) mkdir(UPLOADS_PATH, 0775, true);
             if (move_uploaded_file($_FILES['hero']['tmp_name'], $dest)) {
-                $pdo->prepare('UPDATE config SET portal_hero_path = ?, updated_at = NOW() WHERE id = 1')
-                    ->execute([$fname]);
-                $cfg = $pdo->query('SELECT * FROM config WHERE id = 1')->fetch();
+                $pdo->prepare('UPDATE config SET portal_hero_path = ?, updated_at = NOW() WHERE id = ?')
+                    ->execute([$fname, TIENDA_ID]);
+                $cfgStmt->execute([TIENDA_ID]);
+                $cfg = $cfgStmt->fetch();
                 $success = 'Imagen de portada actualizada correctamente.';
             }
         }

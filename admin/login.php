@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($bloqueado) {
         $error = 'Demasiados intentos fallidos. Intenta de nuevo en ' . ceil($bloqueado / 60) . ' minuto(s).';
     } elseif ($email && $pass) {
-        $stmt = $pdo->prepare('SELECT * FROM admin_usuarios WHERE (email = ? OR nombre = ?) AND activo = TRUE LIMIT 1');
-        $stmt->execute([$email, $email]);
+        $stmt = $pdo->prepare('SELECT * FROM admin_usuarios WHERE (email = ? OR nombre = ?) AND tienda_id = ? AND activo = TRUE LIMIT 1');
+        $stmt->execute([$email, $email, TIENDA_ID]);
         $admin = $stmt->fetch();
         if ($admin && password_verify($pass, $admin['password_hash'])) {
             limpiarIntentos($pdo, $clave);

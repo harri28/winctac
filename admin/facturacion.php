@@ -4,7 +4,9 @@ $adminTitle = 'Facturación';
 require_once __DIR__ . '/includes/header.php';
 
 $pdo = getDB();
-$cfg = $pdo->query('SELECT * FROM config WHERE id = 1')->fetch();
+$cfgStmt = $pdo->prepare('SELECT * FROM config WHERE id = ?');
+$cfgStmt->execute([TIENDA_ID]);
+$cfg = $cfgStmt->fetch();
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_facturacion'])) {
@@ -18,10 +20,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_facturacion'])) 
         UPDATE config
         SET facturacion_activo = ?, facturacion_proveedor = ?, facturacion_api_url = ?,
             facturacion_api_token = ?, facturacion_ruc_emisor = ?, updated_at = NOW()
-        WHERE id = 1
-    ')->execute([$activo, $proveedor, $apiUrl, $apiToken, $ruc]);
+        WHERE id = ?
+    ')->execute([$activo, $proveedor, $apiUrl, $apiToken, $ruc, TIENDA_ID]);
 
-    $cfg = $pdo->query('SELECT * FROM config WHERE id = 1')->fetch();
+    $cfgStmt->execute([TIENDA_ID]);
+    $cfg = $cfgStmt->fetch();
     $success = 'Configuración de facturación guardada correctamente.';
 }
 ?>

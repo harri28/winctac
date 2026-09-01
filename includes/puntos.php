@@ -11,7 +11,9 @@ function otorgarPuntosPedido(PDO $pdo, int $pedidoId): void {
     $pedido = $p->fetch();
     if (!$pedido || !$pedido['cliente_id'] || $pedido['puntos_estado'] === 'otorgado') return;
 
-    $cfg = $pdo->query('SELECT puntos_activo, puntos_por_sol FROM config WHERE id = 1')->fetch();
+    $cfgStmt = $pdo->prepare('SELECT puntos_activo, puntos_por_sol FROM config WHERE id = ?');
+    $cfgStmt->execute([TIENDA_ID]);
+    $cfg = $cfgStmt->fetch();
     if (!$cfg || !$cfg['puntos_activo']) return;
 
     $puntos = (int) floor(floatval($pedido['total']) * floatval($cfg['puntos_por_sol']));

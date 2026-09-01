@@ -3,14 +3,27 @@
 -- Base de datos: selvadigital
 -- ============================================================
 
+-- Tiendas (multi-tenant): cada negocio alojado en esta instalación,
+-- identificado por el hostname con el que llega la petición (dominio
+-- propio o subdominio, ambos caben en la misma columna).
+CREATE TABLE IF NOT EXISTS tiendas (
+    id SERIAL PRIMARY KEY,
+    slug VARCHAR(100) UNIQUE NOT NULL,
+    hostname VARCHAR(255) UNIQUE NOT NULL,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Admin del sistema
 CREATE TABLE IF NOT EXISTS admin_usuarios (
     id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
     nombre VARCHAR(100) NOT NULL,
-    email VARCHAR(150) UNIQUE NOT NULL,
+    email VARCHAR(150) NOT NULL,
     password_hash VARCHAR(255) NOT NULL,
     activo BOOLEAN DEFAULT TRUE,
-    created_at TIMESTAMP DEFAULT NOW()
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(tienda_id, email)
 );
 
 -- Clientes registrados
@@ -121,9 +134,9 @@ CREATE TABLE IF NOT EXISTS productos (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- Configuración general (fila única)
+-- Configuración general (una fila por tienda; el id ES el id de la tienda)
 CREATE TABLE IF NOT EXISTS config (
-    id INTEGER PRIMARY KEY DEFAULT 1,
+    id INTEGER PRIMARY KEY REFERENCES tiendas(id),
     -- Tienda
     nombre_tienda VARCHAR(200) DEFAULT 'Mi Tienda Online',
     descripcion TEXT DEFAULT '',
@@ -231,12 +244,16 @@ CREATE TABLE IF NOT EXISTS puntos_cupones (
 );
 
 -- Datos por defecto
-INSERT INTO config (id) VALUES (1) ON CONFLICT (id) DO NOTHING;
+
+-- Tienda por defecto (instalación local / primer negocio)
+INSERT INTO tiendas (slug, hostname) VALUES ('default', 'localhost') ON CONFLICT (hostname) DO NOTHING;
+
+INSERT INTO config (id) VALUES ((SELECT id FROM tiendas WHERE hostname = 'localhost')) ON CONFLICT (id) DO NOTHING;
 
 -- Admin por defecto: admin / admin123
-INSERT INTO admin_usuarios (nombre, email, password_hash)
-VALUES ('Administrador', 'admin', '$2y$10$tCq8.q6YA.MXRTqCMmXsy.nxbAK7dGpLSKvRBWmn.LXgzd6rgY0iy')
-ON CONFLICT (email) DO NOTHING;
+INSERT INTO admin_usuarios (tienda_id, nombre, email, password_hash)
+VALUES ((SELECT id FROM tiendas WHERE hostname = 'localhost'), 'Administrador', 'admin', '$2y$10$tCq8.q6YA.MXRTqCMmXsy.nxbAK7dGpLSKvRBWmn.LXgzd6rgY0iy')
+ON CONFLICT (tienda_id, email) DO NOTHING;
 
 -- Empresas de envío de ejemplo
 INSERT INTO empresas_envio (nombre, descripcion, precio) VALUES

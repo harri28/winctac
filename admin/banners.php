@@ -11,8 +11,8 @@ $error   = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_anuncio'])) {
     $anuncioTexto  = trim($_POST['anuncio_texto'] ?? '');
     $anuncioActivo = isset($_POST['anuncio_activo']) ? 't' : 'f';
-    $pdo->prepare('UPDATE config SET anuncio_texto = ?, anuncio_activo = ?, updated_at = NOW() WHERE id = 1')
-        ->execute([$anuncioTexto, $anuncioActivo]);
+    $pdo->prepare('UPDATE config SET anuncio_texto = ?, anuncio_activo = ?, updated_at = NOW() WHERE id = ?')
+        ->execute([$anuncioTexto, $anuncioActivo, TIENDA_ID]);
     header('Location: ' . BASE_URL . '/admin/banners.php?ok=anuncio');
     exit;
 }
@@ -100,7 +100,9 @@ if (!empty($_GET['clear']) && is_numeric($_GET['clear'])) {
 if (($_GET['ok'] ?? '') === 'anuncio') $success = 'Franja de anuncio guardada.';
 elseif (isset($_GET['ok'])) $success = 'Cambio guardado.';
 
-$cfg     = $pdo->query('SELECT * FROM config WHERE id = 1')->fetch();
+$cfgStmt = $pdo->prepare('SELECT * FROM config WHERE id = ?');
+$cfgStmt->execute([TIENDA_ID]);
+$cfg     = $cfgStmt->fetch();
 $banners = $pdo->query('SELECT * FROM banners ORDER BY orden ASC LIMIT 6')->fetchAll();
 ?>
 

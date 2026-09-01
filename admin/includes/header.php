@@ -11,6 +11,16 @@ function requireAdmin(): void {
         header('Location: ' . BASE_URL . '/admin/login.php');
         exit;
     }
+    // Multi-tenant: la sesión puede venir de otro hostname/tienda (ej. si el
+    // navegador conserva una cookie de otra tienda) — se revalida que el
+    // admin logueado en verdad pertenezca a TIENDA_ID, no solo que exista sesión.
+    $stmt = getDB()->prepare('SELECT 1 FROM admin_usuarios WHERE id = ? AND tienda_id = ?');
+    $stmt->execute([$_SESSION['admin_id'], TIENDA_ID]);
+    if (!$stmt->fetchColumn()) {
+        session_destroy();
+        header('Location: ' . BASE_URL . '/admin/login.php');
+        exit;
+    }
 }
 
 // Auth ANTES de emitir cualquier HTML

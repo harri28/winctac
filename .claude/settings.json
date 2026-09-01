@@ -55,7 +55,12 @@
       "Bash(/c/xampp/php/php.exe \"C:/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/test_etiquetas.php\")",
       "Bash(rm \"/c/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/test_etiquetas.php\")",
       "Bash(/c/xampp/php/php.exe -l /c/xampp/htdocs/ecomerce/admin/reportes.php)",
-      "Bash(rm \"/c/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/test_reportes_harness.php\" /tmp/err_*.log 2>/dev/null; true)"
+      "Bash(rm \"/c/Users/harri/AppData/Local/Temp/claude/c--xampp-htdocs-ecomerce/a8fac820-228b-447a-bae1-ca2d9f6753a2/scratchpad/test_reportes_harness.php\" /tmp/err_*.log 2>/dev/null; true)",
+      "Bash(export PGPASSWORD=1234)",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT * FROM tiendas;\")",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT id, tienda_id, email FROM admin_usuarios;\")",
+      "Bash(\"/c/Program Files/PostgreSQL/17/bin/psql.exe\" -h 127.0.0.1 -p 5432 -U postgres -d selvadigital -c \"SELECT id FROM config;\")",
+      "Bash(git commit -m ' *)"
     ],
     "additionalDirectories": [
       "C:\\Users\\harri\\AppData\\Local\\Temp\\claude\\c--xampp-htdocs-ecomerce\\a8fac820-228b-447a-bae1-ca2d9f6753a2\\scratchpad"
