@@ -147,6 +147,8 @@ try {
 <script>
 let allProductos = [];
 let categoriaActiva = 'all';
+let paginaActual = 1;
+const PRODUCTOS_POR_PAGINA = 20;
 
 // Si llegamos desde otra página con ?categoria= o ?q=, aplicarlo de entrada
 const _params = new URLSearchParams(window.location.search);
@@ -174,10 +176,12 @@ window.filtrarCategoriaInicio = function(id, nombre, el) {
     document.querySelectorAll('.cat-menu-item').forEach(i => i.classList.remove('active'));
     if (el) el.classList.add('active');
     document.getElementById('section-title').textContent = id === 'all' ? 'Todos los productos' : nombre;
+    paginaActual = 1;
     renderProductos();
 };
 
 window.filtrarBusquedaInicio = function() {
+    paginaActual = 1;
     renderProductos();
 };
 
@@ -213,7 +217,53 @@ function renderProductos() {
         return;
     }
 
-    container.innerHTML = `<div class="products-grid">${lista.map(p => cardHTML(p)).join('')}</div>`;
+    const totalPaginas = Math.ceil(lista.length / PRODUCTOS_POR_PAGINA);
+    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
+    if (paginaActual < 1) paginaActual = 1;
+
+    const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
+    const pagina = lista.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
+
+    container.innerHTML = `<div class="products-grid">${pagina.map(p => cardHTML(p)).join('')}</div>`
+        + paginacionHTML(totalPaginas);
+}
+
+// Genera "‹ 1 2 3 ... 10 ›" con el rango alrededor de la página actual,
+// para no listar cientos de botones cuando hay catálogos grandes.
+function paginacionHTML(totalPaginas) {
+    if (totalPaginas <= 1) return '';
+
+    const paginas = [];
+    const rango = 1;
+    for (let i = 1; i <= totalPaginas; i++) {
+        if (i === 1 || i === totalPaginas || (i >= paginaActual - rango && i <= paginaActual + rango)) {
+            paginas.push(i);
+        } else if (paginas[paginas.length - 1] !== '...') {
+            paginas.push('...');
+        }
+    }
+
+    const botones = paginas.map(p => p === '...'
+        ? `<span class="page-ellipsis">…</span>`
+        : `<button class="page-btn ${p === paginaActual ? 'active' : ''}" onclick="irAPagina(${p})">${p}</button>`
+    ).join('');
+
+    return `
+    <div class="pagination">
+        <button class="page-btn page-nav" onclick="irAPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
+            <i class="fas fa-chevron-left"></i>
+        </button>
+        ${botones}
+        <button class="page-btn page-nav" onclick="irAPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}>
+            <i class="fas fa-chevron-right"></i>
+        </button>
+    </div>`;
+}
+
+function irAPagina(n) {
+    paginaActual = n;
+    renderProductos();
+    document.getElementById('section-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
 }
 
 function cardHTML(p) {
