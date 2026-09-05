@@ -20,7 +20,7 @@ function obtenerCatalogo(PDO $pdo): array {
     $imgBase = BASE_URL . '/uploads/productos/';
     $stmt = $pdo->prepare("
         SELECT p.id, p.nombre, p.codigo, p.descripcion, p.precio, p.stock,
-               p.categoria_id, c.nombre AS categoria, p.etiquetas,
+               p.categoria_id, c.nombre AS categoria, p.etiquetas, p.created_at,
                CASE WHEN p.imagen_path <> '' THEN '$imgBase' || p.imagen_path ELSE NULL END AS imagen
         FROM productos p
         LEFT JOIN categorias c ON c.id = p.categoria_id
@@ -52,6 +52,25 @@ try {
         case 'productos':
             $productos = obtenerCatalogo($pdo);
             echo json_encode(['success' => true, 'data' => $productos]);
+            break;
+
+        // ── PRODUCTOS EN PROMOCIÓN (para la fila de Inicio) ──
+        case 'promociones':
+            $imgBase = BASE_URL . '/uploads/productos/';
+            $promoStmt = $pdo->prepare("
+                SELECT p.id, p.nombre, p.codigo, p.precio, p.stock,
+                       p.categoria_id, c.nombre AS categoria,
+                       CASE WHEN p.imagen_path <> '' THEN '$imgBase' || p.imagen_path ELSE NULL END AS imagen,
+                       MIN(pp.orden) AS orden
+                FROM promocion_productos pp
+                JOIN promociones prom ON prom.id = pp.promocion_id AND prom.activo = TRUE AND prom.tienda_id = ?
+                JOIN productos p ON p.id = pp.producto_id AND p.activo = TRUE
+                LEFT JOIN categorias c ON c.id = p.categoria_id
+                GROUP BY p.id, p.nombre, p.codigo, p.precio, p.stock, p.categoria_id, c.nombre, p.imagen_path
+                ORDER BY orden ASC, p.nombre ASC
+            ");
+            $promoStmt->execute([TIENDA_ID]);
+            echo json_encode(['success' => true, 'data' => $promoStmt->fetchAll()]);
             break;
 
         // ── CREAR PEDIDO ─────────────────────────────────────

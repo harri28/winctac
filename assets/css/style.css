@@ -354,6 +354,19 @@ img { max-width: 100%; display: block; }
     color: var(--text);
 }
 
+.ver-todos-link {
+    font-size: .85rem;
+    font-weight: 600;
+    color: var(--primary);
+    white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+.ver-todos-link:hover { text-decoration: underline; }
+
+.home-section + .home-section { margin-top: 40px; }
+
 /* ── PRODUCT GRID ── */
 .products-grid {
     display: grid;
@@ -464,6 +477,19 @@ img { max-width: 100%; display: block; }
 
 .product-stock.low { color: var(--warning); font-weight: 600; }
 .product-stock.out { color: var(--danger); font-weight: 600; }
+
+/* ── GALERÍA DE MINIATURAS (producto.php) ── */
+.prod-img-thumb {
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    background: var(--surface-3);
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    padding: 2px;
+}
+.prod-img-thumb.active { border-color: var(--primary); }
 
 .product-footer {
     padding: 0 14px 14px;

@@ -146,7 +146,6 @@ try {
                         WHERE id=? AND tienda_id=?
                     ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $etiquetasJson, $productoId, TIENDA_ID]);
                 }
-                echo json_encode(['success' => true, 'id' => $productoId]);
             } else {
                 $ins = $pdo->prepare('
                     INSERT INTO productos (tienda_id, nombre, codigo, descripcion, precio, stock, categoria_id, activo, imagen_path, etiquetas)
@@ -154,8 +153,83 @@ try {
                     RETURNING id
                 ');
                 $ins->execute([TIENDA_ID, $nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath ?? '', $etiquetasJson]);
-                echo json_encode(['success' => true, 'id' => $ins->fetchColumn()]);
+                $productoId = $ins->fetchColumn();
             }
+
+            // Imágenes adicionales (hasta 4, más la principal = 5 en total).
+            // Eliminar las marcadas por el usuario (llegan como JSON de ids).
+            $eliminarImgs = json_decode($_POST['eliminar_imagenes'] ?? '[]', true);
+            if (is_array($eliminarImgs) && $eliminarImgs) {
+                $ph = implode(',', array_fill(0, count($eliminarImgs), '?'));
+                $sel = $pdo->prepare("SELECT id, imagen_path FROM producto_imagenes WHERE producto_id = ? AND id IN ($ph)");
+                $sel->execute(array_merge([$productoId], array_map('intval', $eliminarImgs)));
+                foreach ($sel->fetchAll() as $img) {
+                    if (file_exists(UPLOADS_PATH . '/productos/' . $img['imagen_path'])) {
+                        @unlink(UPLOADS_PATH . '/productos/' . $img['imagen_path']);
+                    }
+                }
+                $pdo->prepare("DELETE FROM producto_imagenes WHERE producto_id = ? AND id IN ($ph)")
+                    ->execute(array_merge([$productoId], array_map('intval', $eliminarImgs)));
+            }
+
+            // Subir las nuevas (slots imagen_extra_1..4)
+            $insExtra = $pdo->prepare('INSERT INTO producto_imagenes (producto_id, imagen_path, orden) VALUES (?, ?, ?)');
+            for ($i = 1; $i <= 4; $i++) {
+                $campo = "imagen_extra_$i";
+                if (empty($_FILES[$campo]['tmp_name'])) continue;
+                $ext = strtolower(pathinfo($_FILES[$campo]['name'], PATHINFO_EXTENSION));
+                if (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) continue;
+                $dir = UPLOADS_PATH . '/productos';
+                if (!is_dir($dir)) mkdir($dir, 0775, true);
+                $fname = 'prod_' . time() . '_' . rand(100, 999) . '_' . $i . '.' . $ext;
+                if (move_uploaded_file($_FILES[$campo]['tmp_name'], $dir . '/' . $fname)) {
+                    $insExtra->execute([$productoId, $fname, $i]);
+                }
+            }
+
+            // Ficha técnica: filas libres nombre/valor (llegan como JSON desde el
+            // formulario). Se reemplaza la lista completa por la enviada, igual que
+            // con las imágenes adicionales — más simple que hacer diff fila por fila.
+            $fichaRaw = json_decode($_POST['ficha_tecnica'] ?? '[]', true);
+            $pdo->prepare('DELETE FROM producto_ficha_tecnica WHERE producto_id = ?')->execute([$productoId]);
+            if (is_array($fichaRaw)) {
+                $insFicha = $pdo->prepare('INSERT INTO producto_ficha_tecnica (producto_id, nombre_campo, valor, orden) VALUES (?, ?, ?, ?)');
+                $orden = 0;
+                foreach ($fichaRaw as $fila) {
+                    $campo = trim(mb_substr((string)($fila['nombre'] ?? ''), 0, 100));
+                    $valor = trim(mb_substr((string)($fila['valor'] ?? ''), 0, 500));
+                    if ($campo === '') continue;
+                    $insFicha->execute([$productoId, $campo, $valor, $orden++]);
+                }
+            }
+
+            echo json_encode(['success' => true, 'id' => $productoId]);
+            break;
+
+        // Ficha técnica de un producto (para precargar el modal de edición)
+        case 'ficha_tecnica_producto':
+            $productoId = intval($_GET['producto_id'] ?? 0);
+            $ficha = $pdo->prepare('
+                SELECT ft.nombre_campo, ft.valor FROM producto_ficha_tecnica ft
+                JOIN productos p ON p.id = ft.producto_id
+                WHERE ft.producto_id = ? AND p.tienda_id = ?
+                ORDER BY ft.orden ASC, ft.id ASC
+            ');
+            $ficha->execute([$productoId, TIENDA_ID]);
+            echo json_encode(['success' => true, 'data' => $ficha->fetchAll()]);
+            break;
+
+        // Imágenes adicionales de un producto (para precargar el modal de edición)
+        case 'imagenes_producto':
+            $productoId = intval($_GET['producto_id'] ?? 0);
+            $img = $pdo->prepare('
+                SELECT pi.id, pi.imagen_path FROM producto_imagenes pi
+                JOIN productos p ON p.id = pi.producto_id
+                WHERE pi.producto_id = ? AND p.tienda_id = ?
+                ORDER BY pi.orden ASC, pi.id ASC
+            ');
+            $img->execute([$productoId, TIENDA_ID]);
+            echo json_encode(['success' => true, 'data' => $img->fetchAll()]);
             break;
 
         case 'eliminar_producto':
@@ -164,9 +238,16 @@ try {
             $row = $pdo->prepare('SELECT imagen_path FROM productos WHERE id = ? AND tienda_id = ?');
             $row->execute([$productoId, TIENDA_ID]);
             $imgPath = $row->fetchColumn();
+            $extraImgs = $pdo->prepare('SELECT imagen_path FROM producto_imagenes WHERE producto_id = ?');
+            $extraImgs->execute([$productoId]);
+            $extraPaths = $extraImgs->fetchAll(PDO::FETCH_COLUMN);
+            // producto_imagenes se borra sola por ON DELETE CASCADE
             $pdo->prepare('DELETE FROM productos WHERE id = ? AND tienda_id = ?')->execute([$productoId, TIENDA_ID]);
             if ($imgPath && file_exists(UPLOADS_PATH . '/productos/' . $imgPath)) {
                 @unlink(UPLOADS_PATH . '/productos/' . $imgPath);
+            }
+            foreach ($extraPaths as $p) {
+                if ($p && file_exists(UPLOADS_PATH . '/productos/' . $p)) @unlink(UPLOADS_PATH . '/productos/' . $p);
             }
             echo json_encode(['success' => true]);
             break;

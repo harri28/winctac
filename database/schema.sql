@@ -137,6 +137,26 @@ CREATE TABLE IF NOT EXISTS productos (
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Imágenes adicionales de un producto (además de productos.imagen_path, que
+-- sigue siendo la principal) — hasta 4 más, 5 en total, se valida en el admin.
+CREATE TABLE IF NOT EXISTS producto_imagenes (
+    id SERIAL PRIMARY KEY,
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    imagen_path TEXT NOT NULL,
+    orden INTEGER DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Ficha técnica: filas libres nombre/valor por producto (ej: Peso, Tamaño,
+-- Color, Lote...) — sin plantilla fija, el admin define y renombra los campos.
+CREATE TABLE IF NOT EXISTS producto_ficha_tecnica (
+    id SERIAL PRIMARY KEY,
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    nombre_campo VARCHAR(100) NOT NULL,
+    valor VARCHAR(500) NOT NULL DEFAULT '',
+    orden INTEGER DEFAULT 0
+);
+
 -- Configuración general (una fila por tienda; el id ES el id de la tienda)
 CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY REFERENCES tiendas(id),
@@ -188,6 +208,24 @@ CREATE TABLE IF NOT EXISTS login_intentos (
     intentos INTEGER NOT NULL DEFAULT 0,
     bloqueado_hasta TIMESTAMP DEFAULT NULL,
     updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Promociones: seleccionan productos existentes para destacarlos en Inicio
+-- (no cambian el precio, solo agrupan/visibilizan) — por tienda.
+CREATE TABLE IF NOT EXISTS promociones (
+    id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+    nombre VARCHAR(150) NOT NULL,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS promocion_productos (
+    id SERIAL PRIMARY KEY,
+    promocion_id INTEGER NOT NULL REFERENCES promociones(id) ON DELETE CASCADE,
+    producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+    orden INTEGER DEFAULT 0,
+    UNIQUE(promocion_id, producto_id)
 );
 
 -- Banners del slider de inicio (por tienda)

@@ -126,144 +126,65 @@ try {
 </script>
 <?php endif; ?>
 
-<!-- PRODUCTOS -->
 <div class="page-wrapper">
-
     <div class="container">
-        <div class="section-header">
-            <h2 class="section-title" id="section-title">Todos los productos</h2>
+
+        <!-- PROMOCIONES -->
+        <div class="home-section" id="promo-section" style="display:none">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-percentage"></i> <span id="promo-titulo">Promociones</span></h2>
+            </div>
+            <div id="promo-container" class="products-grid"></div>
         </div>
 
-        <div id="products-container">
-            <div class="loading-overlay">
-                <div class="spinner"></div> Cargando productos...
+        <!-- NUEVOS PRODUCTOS -->
+        <div class="home-section">
+            <div class="section-header">
+                <h2 class="section-title"><i class="fas fa-star"></i> Nuevos productos</h2>
+                <a href="<?= BASE_URL ?>/catalogo.php" class="ver-todos-link">Ver todos los productos <i class="fas fa-arrow-right"></i></a>
+            </div>
+            <div id="nuevos-container" class="products-grid">
+                <div class="loading-overlay">
+                    <div class="spinner"></div> Cargando productos...
+                </div>
             </div>
         </div>
+
     </div>
 </div>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
 
 <script>
-let allProductos = [];
-let categoriaActiva = 'all';
-let paginaActual = 1;
-const PRODUCTOS_POR_PAGINA = 20;
+const NUEVOS_LIMITE = 8;
 
-// Si llegamos desde otra página con ?categoria= o ?q=, aplicarlo de entrada
-const _params = new URLSearchParams(window.location.search);
-if (_params.get('categoria')) categoriaActiva = _params.get('categoria');
-if (_params.get('q')) document.getElementById('header-search-input').value = _params.get('q');
-
-// Resalta el ítem correcto en el dropdown de categorías (del header compartido)
-function marcarCategoriaActiva() {
-    document.querySelectorAll('.cat-menu-item').forEach(item => {
-        const activo = item.dataset.cat === categoriaActiva;
-        item.classList.toggle('active', activo);
-        if (activo) {
-            document.getElementById('section-title').textContent =
-                categoriaActiva === 'all' ? 'Todos los productos' : item.textContent.trim();
-        }
-    });
-}
-marcarCategoriaActiva();
-document.addEventListener('categoriasListas', marcarCategoriaActiva);
-
-// Hooks que el header (compartido en todas las páginas) llama cuando estamos aquí,
-// para filtrar sin recargar en vez de navegar a index.php?categoria=/?q=
-window.filtrarCategoriaInicio = function(id, nombre, el) {
-    categoriaActiva = id;
-    document.querySelectorAll('.cat-menu-item').forEach(i => i.classList.remove('active'));
-    if (el) el.classList.add('active');
-    document.getElementById('section-title').textContent = id === 'all' ? 'Todos los productos' : nombre;
-    paginaActual = 1;
-    renderProductos();
-};
-
-window.filtrarBusquedaInicio = function() {
-    paginaActual = 1;
-    renderProductos();
-};
-
-async function cargarProductos() {
-    document.getElementById('products-container').innerHTML =
-        '<div class="loading-overlay"><div class="spinner"></div> Cargando productos...</div>';
+async function cargarNuevosProductos() {
+    const container = document.getElementById('nuevos-container');
     try {
         const res = await fetch(window.BASE_URL + '/api/index.php?action=productos');
         const data = await res.json();
         if (!data.success) throw new Error();
-        allProductos = data.data;
-        renderProductos();
-    } catch(e) {
-        document.getElementById('products-container').innerHTML =
-            '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar productos</h3><p>Intenta de nuevo más tarde.</p></div>';
-    }
-}
-
-function renderProductos() {
-    const q = (document.getElementById('header-search-input').value || '').toLowerCase();
-    let lista = allProductos.filter(p => {
-        const catOk = categoriaActiva === 'all' || p.categoria_id == categoriaActiva;
-        const qOk = !q
-            || p.nombre.toLowerCase().includes(q)
-            || (p.codigo||'').toLowerCase().includes(q)
-            || (p.etiquetas||[]).some(t => t.toLowerCase().includes(q));
-        return catOk && qOk;
-    });
-
-    const container = document.getElementById('products-container');
-    if (!lista.length) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><h3>Sin productos</h3><p>No se encontraron productos con los filtros seleccionados.</p></div>';
-        return;
-    }
-
-    const totalPaginas = Math.ceil(lista.length / PRODUCTOS_POR_PAGINA);
-    if (paginaActual > totalPaginas) paginaActual = totalPaginas;
-    if (paginaActual < 1) paginaActual = 1;
-
-    const inicio = (paginaActual - 1) * PRODUCTOS_POR_PAGINA;
-    const pagina = lista.slice(inicio, inicio + PRODUCTOS_POR_PAGINA);
-
-    container.innerHTML = `<div class="products-grid">${pagina.map(p => cardHTML(p)).join('')}</div>`
-        + paginacionHTML(totalPaginas);
-}
-
-// Genera "‹ 1 2 3 ... 10 ›" con el rango alrededor de la página actual,
-// para no listar cientos de botones cuando hay catálogos grandes.
-function paginacionHTML(totalPaginas) {
-    if (totalPaginas <= 1) return '';
-
-    const paginas = [];
-    const rango = 1;
-    for (let i = 1; i <= totalPaginas; i++) {
-        if (i === 1 || i === totalPaginas || (i >= paginaActual - rango && i <= paginaActual + rango)) {
-            paginas.push(i);
-        } else if (paginas[paginas.length - 1] !== '...') {
-            paginas.push('...');
+        const nuevos = [...data.data]
+            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+            .slice(0, NUEVOS_LIMITE);
+        if (!nuevos.length) {
+            container.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><h3>Sin productos</h3></div>';
+            return;
         }
+        container.innerHTML = nuevos.map(p => cardHTML(p)).join('');
+    } catch (e) {
+        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar productos</h3></div>';
     }
-
-    const botones = paginas.map(p => p === '...'
-        ? `<span class="page-ellipsis">…</span>`
-        : `<button class="page-btn ${p === paginaActual ? 'active' : ''}" onclick="irAPagina(${p})">${p}</button>`
-    ).join('');
-
-    return `
-    <div class="pagination">
-        <button class="page-btn page-nav" onclick="irAPagina(${paginaActual - 1})" ${paginaActual === 1 ? 'disabled' : ''}>
-            <i class="fas fa-chevron-left"></i>
-        </button>
-        ${botones}
-        <button class="page-btn page-nav" onclick="irAPagina(${paginaActual + 1})" ${paginaActual === totalPaginas ? 'disabled' : ''}>
-            <i class="fas fa-chevron-right"></i>
-        </button>
-    </div>`;
 }
 
-function irAPagina(n) {
-    paginaActual = n;
-    renderProductos();
-    document.getElementById('section-title').scrollIntoView({ behavior: 'smooth', block: 'start' });
+async function cargarPromociones() {
+    try {
+        const res = await fetch(window.BASE_URL + '/api/index.php?action=promociones');
+        const data = await res.json();
+        if (!data.success || !data.data.length) return;
+        document.getElementById('promo-section').style.display = '';
+        document.getElementById('promo-container').innerHTML = data.data.map(p => cardHTML(p)).join('');
+    } catch (e) {}
 }
 
 function cardHTML(p) {
@@ -286,7 +207,7 @@ function cardHTML(p) {
             ${stockLabel}
         </div>
         <div class="product-footer">
-            <button class="btn-add-cart" onclick="agregarAlCarrito(${p.id})"
+            <button class="btn-add-cart" onclick="agregarAlCarrito(event,${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},'${(p.imagen||'').replace(/'/g,"\\'")}',${stock})"
                 ${stock <= 0 ? 'disabled' : ''}>
                 <i class="fas fa-plus"></i> Agregar
             </button>
@@ -299,17 +220,11 @@ function irAProducto(e, id) {
     window.location.href = window.BASE_URL + '/producto.php?id=' + id;
 }
 
-function agregarAlCarrito(id) {
-    const p = allProductos.find(x => x.id === id);
-    if (!p) return;
-    Carrito.agregar({
-        id:     p.id,
-        nombre: p.nombre,
-        precio: parseFloat(p.precio),
-        imagen: p.imagen || '',
-        stock:  parseInt(p.stock || 0)
-    });
+function agregarAlCarrito(e, id, nombre, precio, imagen, stock) {
+    e.stopPropagation();
+    Carrito.agregar({ id, nombre, precio: parseFloat(precio), imagen: imagen || '', stock: parseInt(stock || 0) });
 }
 
-cargarProductos();
+cargarNuevosProductos();
+cargarPromociones();
 </script>

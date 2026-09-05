@@ -25,7 +25,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=25">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=28">
     <?= brandColorStyleTag($cfg) ?>
     <script>window.BASE_URL = "<?= BASE_URL ?>";</script>
     <?php if (!empty($ogData)): ?>
@@ -63,7 +63,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
             </button>
             <div class="cat-menu-dropdown" id="cat-dropdown">
                 <div class="cat-menu-item" data-cat="all">
-                    <i class="fas fa-th"></i> Todos
+                    <i class="fas fa-th"></i> Todos los productos
                 </div>
             </div>
         </div>
@@ -71,6 +71,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
         <!-- Nav -->
         <nav class="header-nav">
             <a href="<?= BASE_URL ?>/" class="<?= $currentPage === 'home' ? 'active' : '' ?>">Inicio</a>
+            <a href="<?= BASE_URL ?>/catalogo.php" class="<?= $currentPage === 'catalogo' ? 'active' : '' ?>">Catálogo</a>
         </nav>
 
         <!-- Buscador -->
@@ -122,11 +123,11 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
     });
 
     function irACategoria(id, nombre, el) {
-        // Si estamos en la home, filtrarCategoriaInicio() ya está definida y filtra sin recargar.
+        // Si estamos en catalogo.php, filtrarCategoriaInicio() ya está definida y filtra sin recargar.
         if (typeof window.filtrarCategoriaInicio === 'function') {
             window.filtrarCategoriaInicio(id, nombre, el);
         } else {
-            window.location.href = window.BASE_URL + '/?categoria=' + encodeURIComponent(id);
+            window.location.href = window.BASE_URL + '/catalogo.php?categoria=' + encodeURIComponent(id);
         }
         catWrap.classList.remove('open');
     }
@@ -165,7 +166,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
         if (e.key !== 'Enter') return;
         e.preventDefault();
         if (typeof window.filtrarBusquedaInicio !== 'function') {
-            window.location.href = window.BASE_URL + '/?q=' + encodeURIComponent(searchInput.value);
+            window.location.href = window.BASE_URL + '/catalogo.php?q=' + encodeURIComponent(searchInput.value);
         }
     });
 })();

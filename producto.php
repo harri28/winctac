@@ -26,6 +26,14 @@ $producto = $stmt->fetch();
 
 if (!$producto) { header('Location: ' . BASE_URL . '/'); exit; }
 
+$imgExtraStmt = $pdo->prepare("SELECT imagen_path FROM producto_imagenes WHERE producto_id = ? ORDER BY orden ASC, id ASC");
+$imgExtraStmt->execute([$id]);
+$imagenesExtra = array_map(fn($p) => $imgBase . $p, $imgExtraStmt->fetchAll(PDO::FETCH_COLUMN));
+
+$fichaStmt = $pdo->prepare("SELECT nombre_campo, valor FROM producto_ficha_tecnica WHERE producto_id = ? AND valor <> '' ORDER BY orden ASC, id ASC");
+$fichaStmt->execute([$id]);
+$fichaTecnica = $fichaStmt->fetchAll();
+
 $nombre    = $producto['nombre'];
 $precio    = floatval($producto['precio']);
 $stock     = intval($producto['stock'] ?? 0);
@@ -57,10 +65,10 @@ require_once __DIR__ . '/includes/header.php';
     <div class="breadcrumb-inner">
         <a href="<?= BASE_URL ?>/">Inicio</a>
         <i class="fas fa-chevron-right bc-sep"></i>
-        <a href="<?= BASE_URL ?>/?categoria=all">Catálogo</a>
+        <a href="<?= BASE_URL ?>/catalogo.php?categoria=all">Catálogo</a>
         <?php if ($categoria): ?>
         <i class="fas fa-chevron-right bc-sep"></i>
-        <a href="<?= BASE_URL ?>/?categoria=<?= urlencode($catId ?: $categoria) ?>"><?= htmlspecialchars($categoria) ?></a>
+        <a href="<?= BASE_URL ?>/catalogo.php?categoria=<?= urlencode($catId ?: $categoria) ?>"><?= htmlspecialchars($categoria) ?></a>
         <?php endif; ?>
         <i class="fas fa-chevron-right bc-sep"></i>
         <span><?= htmlspecialchars($nombre) ?></span>
@@ -80,15 +88,27 @@ require_once __DIR__ . '/includes/header.php';
     <!-- ── PRODUCTO ── -->
     <div class="prod-card-wrap" style="background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px;display:flex;gap:20px;align-items:flex-start;max-width:860px">
 
-        <!-- Imagen fija 160px -->
-        <div class="prod-img-box" style="width:160px;min-width:160px;height:160px;background:var(--surface-3);border-radius:var(--radius);overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)">
-            <?php if ($imagen): ?>
-            <img src="<?= htmlspecialchars($imagen) ?>"
-                 alt="<?= htmlspecialchars($nombre) ?>"
-                 style="width:100%;height:100%;object-fit:contain;padding:10px"
-                 onerror="this.outerHTML='<i class=\'fas fa-box\' style=\'font-size:2.5rem;color:var(--text-light)\'></i>'">
-            <?php else: ?>
-            <i class="fas fa-box" style="font-size:2.5rem;color:var(--text-light)"></i>
+        <!-- Imagen fija 160px + miniaturas de la galería -->
+        <div style="display:flex;flex-direction:column;gap:8px">
+            <div class="prod-img-box" id="prod-img-main-box" style="width:160px;min-width:160px;height:160px;background:var(--surface-3);border-radius:var(--radius);overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid var(--border)">
+                <?php if ($imagen): ?>
+                <img id="prod-img-main" src="<?= htmlspecialchars($imagen) ?>"
+                     alt="<?= htmlspecialchars($nombre) ?>"
+                     style="width:100%;height:100%;object-fit:contain;padding:10px"
+                     onerror="this.outerHTML='<i class=\'fas fa-box\' style=\'font-size:2.5rem;color:var(--text-light)\'></i>'">
+                <?php else: ?>
+                <i class="fas fa-box" style="font-size:2.5rem;color:var(--text-light)"></i>
+                <?php endif; ?>
+            </div>
+            <?php if ($imagenesExtra): ?>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;width:160px">
+                <?php if ($imagen): ?>
+                <img src="<?= htmlspecialchars($imagen) ?>" class="prod-img-thumb active" onclick="cambiarImagenProducto(this, '<?= htmlspecialchars($imagen, ENT_QUOTES) ?>')">
+                <?php endif; ?>
+                <?php foreach ($imagenesExtra as $img): ?>
+                <img src="<?= htmlspecialchars($img) ?>" class="prod-img-thumb" onclick="cambiarImagenProducto(this, '<?= htmlspecialchars($img, ENT_QUOTES) ?>')">
+                <?php endforeach; ?>
+            </div>
             <?php endif; ?>
         </div>
 
@@ -146,6 +166,21 @@ require_once __DIR__ . '/includes/header.php';
         </div>
     </div>
 
+    <?php if ($fichaTecnica): ?>
+    <!-- ── FICHA TÉCNICA ── -->
+    <div style="margin-top:24px;max-width:860px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px">
+        <h2 class="section-title" style="margin-bottom:14px"><i class="fas fa-clipboard-list"></i> Ficha técnica</h2>
+        <table style="width:100%;border-collapse:collapse">
+            <?php foreach ($fichaTecnica as $f): ?>
+            <tr style="border-bottom:1px solid var(--border)">
+                <th style="text-align:left;padding:10px 12px;width:200px;color:var(--text-muted);font-weight:600;font-size:.85rem;vertical-align:top"><?= htmlspecialchars($f['nombre_campo']) ?></th>
+                <td style="padding:10px 12px;font-size:.88rem;color:var(--text)"><?= nl2br(htmlspecialchars($f['valor'])) ?></td>
+            </tr>
+            <?php endforeach; ?>
+        </table>
+    </div>
+    <?php endif; ?>
+
     <!-- ── PRODUCTOS RELACIONADOS ── -->
     <div id="relacionados-section" style="margin-top:40px">
         <div class="section-header">
@@ -153,7 +188,7 @@ require_once __DIR__ . '/includes/header.php';
                 <?= $categoria ? 'Más de ' . htmlspecialchars($categoria) : 'Productos relacionados' ?>
             </h2>
             <?php if ($categoria): ?>
-            <a href="<?= BASE_URL ?>/?categoria=<?= urlencode($catId ?: $categoria) ?>" class="btn btn-secondary" style="font-size:.82rem">
+            <a href="<?= BASE_URL ?>/catalogo.php?categoria=<?= urlencode($catId ?: $categoria) ?>" class="btn btn-secondary" style="font-size:.82rem">
                 Ver todos <i class="fas fa-arrow-right"></i>
             </a>
             <?php endif; ?>
@@ -203,6 +238,14 @@ const _catActual = <?= json_encode($categoria) ?>;
 const _idActual  = <?= $id ?>;
 let qty = 1;
 const maxQty = <?= $stock ?>;
+
+// ── Galería: miniaturas debajo de la imagen principal ──
+function cambiarImagenProducto(thumb, src) {
+    const main = document.getElementById('prod-img-main');
+    if (main) main.src = src;
+    document.querySelectorAll('.prod-img-thumb').forEach(t => t.classList.remove('active'));
+    thumb.classList.add('active');
+}
 
 // ── Cantidad ──
 document.getElementById('qty-minus')?.addEventListener('click', () => {

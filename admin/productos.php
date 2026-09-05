@@ -149,9 +149,19 @@ $totalInactivos = count($productos) - $totalActivos;
             <button onclick="cerrarModal()" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--text-muted)">×</button>
         </div>
 
-        <div id="modal-img-preview" style="width:100px;height:100px;border-radius:10px;background:var(--surface-3);margin:0 auto 18px;overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
-            <i class="fas fa-image fa-2x"></i>
+        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
+            <div id="modal-img-preview" style="width:100px;height:100px;border-radius:10px;background:var(--surface-3);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
+                <i class="fas fa-image fa-2x"></i>
+            </div>
+            <?php for ($i = 1; $i <= 4; $i++): ?>
+            <div class="img-extra-slot" id="img-extra-slot-<?= $i ?>" onclick="clickExtraSlot(<?= $i ?>)"
+                 style="width:100px;height:100px;border-radius:10px;background:var(--surface-3);border:2px dashed var(--border);position:relative;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
+                <i class="fas fa-plus"></i>
+                <input type="file" class="img-extra-input" data-slot="<?= $i ?>" accept="image/*" style="display:none" onchange="onExtraFileChange(<?= $i ?>, this)">
+            </div>
+            <?php endfor; ?>
         </div>
+        <div class="form-hint" style="text-align:center;margin-bottom:18px">Hasta 5 imágenes en total (la principal + 4 adicionales)</div>
 
         <div class="form-group">
             <label class="form-label">Nombre <span style="color:var(--danger)">*</span></label>
@@ -217,6 +227,17 @@ $totalInactivos = count($productos) - $totalActivos;
         </div>
 
         <div class="form-group">
+            <label class="form-label">
+                Ficha técnica <span style="color:var(--text-muted);font-size:.75rem;font-weight:400">(se muestra al cliente en la página del producto)</span>
+            </label>
+            <div id="ficha-tecnica-rows"></div>
+            <button type="button" class="btn btn-secondary" onclick="agregarFilaFicha()" style="font-size:.78rem;padding:5px 10px">
+                <i class="fas fa-plus"></i> Agregar campo
+            </button>
+            <div class="form-hint">Deja el valor en blanco para que ese campo no se muestre en la tienda.</div>
+        </div>
+
+        <div class="form-group">
             <label class="form-label">Imagen</label>
             <input type="file" id="f-imagen" class="form-control" accept="image/*" onchange="previewImagen(this)">
             <div class="form-hint">JPG, PNG, WEBP — Recomendado: 400×400px</div>
@@ -269,6 +290,120 @@ let modalProductoId = 0;
 let modalImagenActual = '';
 let tagsActuales = [];
 let todasLasEtiquetas = [];
+
+// ── IMÁGENES ADICIONALES (hasta 4 slots, + la principal = 5 en total) ──
+// Cada slot: null (vacío) | {existingId, path} (ya guardada) | {file} (recién elegida, sin subir)
+let extraSlots = {1: null, 2: null, 3: null, 4: null};
+let eliminarImagenesIds = [];
+
+function resetExtraSlots() {
+    extraSlots = {1: null, 2: null, 3: null, 4: null};
+    eliminarImagenesIds = [];
+    for (let n = 1; n <= 4; n++) renderExtraSlot(n);
+}
+
+function renderExtraSlot(n) {
+    const slot  = document.getElementById('img-extra-slot-' + n);
+    const input = slot.querySelector('.img-extra-input');
+    const data  = extraSlots[n];
+
+    let src = '';
+    if (data && data.file) src = URL.createObjectURL(data.file);
+    else if (data && data.path) src = window.BASE_URL + '/uploads/productos/' + data.path;
+
+    slot.querySelectorAll('.img-extra-thumb, .img-extra-remove').forEach(el => el.remove());
+
+    if (src) {
+        slot.style.border = '1.5px solid var(--border)';
+        const img = document.createElement('img');
+        img.className = 'img-extra-thumb';
+        img.src = src;
+        img.style.cssText = 'width:100%;height:100%;object-fit:cover';
+        slot.insertBefore(img, input);
+        const btnX = document.createElement('span');
+        btnX.className = 'img-extra-remove';
+        btnX.innerHTML = '&times;';
+        btnX.style.cssText = 'position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;z-index:2';
+        btnX.onclick = (e) => removeExtraSlot(n, e);
+        slot.appendChild(btnX);
+        slot.querySelector('.fa-plus').style.display = 'none';
+    } else {
+        slot.style.border = '2px dashed var(--border)';
+        slot.querySelector('.fa-plus').style.display = '';
+    }
+}
+
+function clickExtraSlot(n) {
+    document.querySelector(`.img-extra-input[data-slot="${n}"]`).click();
+}
+
+function onExtraFileChange(n, input) {
+    const file = input.files[0];
+    if (!file) return;
+    // Si ya había una imagen guardada en este slot, se reemplaza: se marca para borrar.
+    if (extraSlots[n] && extraSlots[n].existingId) {
+        eliminarImagenesIds.push(extraSlots[n].existingId);
+    }
+    extraSlots[n] = {file};
+    renderExtraSlot(n);
+}
+
+function removeExtraSlot(n, event) {
+    event.stopPropagation();
+    if (extraSlots[n] && extraSlots[n].existingId) {
+        eliminarImagenesIds.push(extraSlots[n].existingId);
+    }
+    extraSlots[n] = null;
+    const slot = document.getElementById('img-extra-slot-' + n);
+    slot.querySelector('.img-extra-input').value = '';
+    renderExtraSlot(n);
+}
+
+async function cargarImagenesExtra(productoId) {
+    try {
+        const res  = await fetch(window.BASE_URL + '/admin/api.php?action=imagenes_producto&producto_id=' + productoId);
+        const data = await res.json();
+        if (!data.success) return;
+        data.data.slice(0, 4).forEach((img, i) => {
+            extraSlots[i + 1] = {existingId: img.id, path: img.imagen_path};
+            renderExtraSlot(i + 1);
+        });
+    } catch (e) {}
+}
+
+// ── FICHA TÉCNICA (filas libres nombre/valor, sin plantilla fija) ──
+const FICHA_TECNICA_DEFAULT = ['Peso', 'Tamaño', 'Color', 'Fecha de fabricación'];
+
+function limpiarFilasFicha() {
+    document.getElementById('ficha-tecnica-rows').innerHTML = '';
+}
+
+function agregarFilaFicha(nombre = '', valor = '') {
+    const row = document.createElement('div');
+    row.className = 'ficha-row';
+    row.style.cssText = 'display:flex;gap:8px;margin-bottom:6px';
+    row.innerHTML = `
+        <input type="text" class="form-control ficha-nombre" placeholder="Nombre (ej: Peso)" style="flex:1;font-size:.85rem">
+        <input type="text" class="form-control ficha-valor" placeholder="Valor (ej: 5 kg)" style="flex:1;font-size:.85rem">
+        <button type="button" class="btn btn-secondary" onclick="this.closest('.ficha-row').remove()" style="padding:6px 10px" title="Quitar campo">
+            <i class="fas fa-times"></i>
+        </button>`;
+    row.querySelector('.ficha-nombre').value = nombre;
+    row.querySelector('.ficha-valor').value = valor;
+    document.getElementById('ficha-tecnica-rows').appendChild(row);
+}
+
+async function cargarFichaTecnica(productoId) {
+    try {
+        const res  = await fetch(window.BASE_URL + '/admin/api.php?action=ficha_tecnica_producto&producto_id=' + productoId);
+        const data = await res.json();
+        if (data.success && data.data.length) {
+            data.data.forEach(f => agregarFilaFicha(f.nombre_campo, f.valor));
+            return;
+        }
+    } catch (e) {}
+    FICHA_TECNICA_DEFAULT.forEach(n => agregarFilaFicha(n, ''));
+}
 
 fetch(window.BASE_URL + '/admin/api.php?action=etiquetas_sugeridas')
     .then(r => r.json())
@@ -356,6 +491,9 @@ function abrirNuevo() {
     document.getElementById('qr-section').style.display = 'none';
     tagsActuales = [];
     renderTags();
+    resetExtraSlots();
+    limpiarFilasFicha();
+    FICHA_TECNICA_DEFAULT.forEach(n => agregarFilaFicha(n, ''));
     cerrarNuevaCategoria();
     document.getElementById('modal-producto').style.display = 'flex';
 }
@@ -386,6 +524,12 @@ function abrirEditar(p) {
     const productoUrl = window.BASE_URL + '/producto.php?id=' + p.id;
     document.getElementById('qr-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(productoUrl);
     document.getElementById('qr-section').style.display = 'block';
+
+    resetExtraSlots();
+    cargarImagenesExtra(p.id);
+
+    limpiarFilasFicha();
+    cargarFichaTecnica(p.id);
 
     cerrarNuevaCategoria();
     document.getElementById('modal-producto').style.display = 'flex';
@@ -531,9 +675,20 @@ async function guardarProducto() {
     form.append('stock', stock);
     form.append('descripcion', document.getElementById('f-descripcion').value.trim());
     form.append('etiquetas', JSON.stringify(tagsActuales));
+
+    const fichaTecnica = [...document.querySelectorAll('.ficha-row')]
+        .map(r => ({ nombre: r.querySelector('.ficha-nombre').value.trim(), valor: r.querySelector('.ficha-valor').value.trim() }))
+        .filter(f => f.nombre);
+    form.append('ficha_tecnica', JSON.stringify(fichaTecnica));
+
     form.append('activo', document.getElementById('f-activo').checked ? '1' : '0');
     const imgFile = document.getElementById('f-imagen').files[0];
     if (imgFile) form.append('imagen', imgFile);
+
+    for (let n = 1; n <= 4; n++) {
+        if (extraSlots[n] && extraSlots[n].file) form.append('imagen_extra_' + n, extraSlots[n].file);
+    }
+    form.append('eliminar_imagenes', JSON.stringify(eliminarImagenesIds));
 
     const res  = await fetch(window.BASE_URL + '/admin/api.php?action=guardar_producto', { method: 'POST', body: form });
     const data = await res.json();

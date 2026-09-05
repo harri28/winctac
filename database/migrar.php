@@ -183,6 +183,40 @@ $migraciones = [
     'banners_tienda_id_backfill' => "UPDATE banners SET tienda_id = 1 WHERE tienda_id IS NULL",
     'banners_tienda_id_notnull'  => "ALTER TABLE banners ALTER COLUMN tienda_id SET NOT NULL",
     'banners_tienda_fk'          => "ALTER TABLE banners ADD CONSTRAINT banners_tienda_id_fkey FOREIGN KEY (tienda_id) REFERENCES tiendas(id)",
+
+    // ── Imágenes adicionales de producto (hasta 4 extra + la principal = 5) ──
+    'producto_imagenes_table' => "CREATE TABLE IF NOT EXISTS producto_imagenes (
+        id SERIAL PRIMARY KEY,
+        producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+        imagen_path TEXT NOT NULL,
+        orden INTEGER DEFAULT 0,
+        created_at TIMESTAMP DEFAULT NOW()
+    )",
+
+    // ── Promociones (Inicio: fila/carrusel de productos destacados) ──
+    'promociones_table' => "CREATE TABLE IF NOT EXISTS promociones (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        nombre VARCHAR(150) NOT NULL,
+        activo BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+    )",
+    'promocion_productos_table' => "CREATE TABLE IF NOT EXISTS promocion_productos (
+        id SERIAL PRIMARY KEY,
+        promocion_id INTEGER NOT NULL REFERENCES promociones(id) ON DELETE CASCADE,
+        producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+        orden INTEGER DEFAULT 0,
+        UNIQUE(promocion_id, producto_id)
+    )",
+
+    // ── Ficha técnica: filas libres nombre/valor por producto ──
+    'producto_ficha_tecnica_table' => "CREATE TABLE IF NOT EXISTS producto_ficha_tecnica (
+        id SERIAL PRIMARY KEY,
+        producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
+        nombre_campo VARCHAR(100) NOT NULL,
+        valor VARCHAR(500) NOT NULL DEFAULT '',
+        orden INTEGER DEFAULT 0
+    )",
 ];
 
 foreach ($migraciones as $nombre => $sql) {
