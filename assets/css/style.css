@@ -962,7 +962,7 @@ img { max-width: 100%; display: block; }
     position: relative;
 }
 .corp-hero-overlay {
-    background: linear-gradient(180deg, rgba(15,23,42,.55), rgba(15,23,42,.75));
+    background: linear-gradient(180deg, rgba(15,23,42,.25), rgba(15,23,42,.45));
     padding: 72px 20px;
     text-align: center;
     color: #fff;
@@ -971,8 +971,27 @@ img { max-width: 100%; display: block; }
     align-items: center;
     gap: 14px;
 }
-.corp-hero-overlay h1 { font-size: 2rem; font-weight: 800; }
-.corp-hero-overlay p { font-size: 1.05rem; color: #e2e8f0; margin-bottom: 6px; }
+.corp-hero-overlay h1 { font-size: 2rem; font-weight: 800; text-shadow: 0 2px 8px rgba(0,0,0,.5); }
+.corp-hero-overlay p { font-size: 1.05rem; color: #e2e8f0; margin-bottom: 6px; text-shadow: 0 1px 6px rgba(0,0,0,.5); }
+
+.corp-hero-cta {
+    position: absolute;
+    bottom: 14px;
+    right: 20px;
+    z-index: 2;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--primary);
+    color: #fff;
+    padding: 7px 14px;
+    border-radius: var(--radius-sm, 6px);
+    font-size: .78rem;
+    font-weight: 600;
+    text-decoration: none;
+    box-shadow: 0 2px 10px rgba(0,0,0,.4);
+}
+.corp-hero-cta:hover { background: var(--primary-dark); color: #fff; }
 
 .corp-values {
     display: grid;

@@ -26,10 +26,10 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
     <div class="corp-hero-overlay">
         <h1><?= $shopName ?></h1>
         <p>Calidad, confianza y cercanía en cada compra</p>
-        <a href="<?= BASE_URL ?>/" class="btn btn-primary btn-lg">
-            <i class="fas fa-store"></i> Ver catálogo
-        </a>
     </div>
+    <a href="<?= BASE_URL ?>/" class="corp-hero-cta">
+        <i class="fas fa-store"></i> Ver catálogo
+    </a>
 </section>
 
 <div class="page-wrapper">
