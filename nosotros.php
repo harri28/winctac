@@ -56,26 +56,17 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px">
         <div class="card">
             <div class="card-title"><i class="fas fa-eye"></i> Visión</div>
-            <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7">
-                Ser la tienda online de referencia para nuestros clientes, reconocida por su confiabilidad,
-                variedad y la calidad de su servicio.
-            </p>
+            <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= nl2br(htmlspecialchars($cfg['portal_vision'] ?? '')) ?></p>
         </div>
         <div class="card">
             <div class="card-title"><i class="fas fa-bullseye"></i> Misión</div>
-            <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7">
-                Brindar a cada cliente una experiencia de compra simple, segura y satisfactoria, todos los días.
-            </p>
+            <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= nl2br(htmlspecialchars($cfg['portal_mision'] ?? '')) ?></p>
         </div>
     </div>
 
     <div class="card" style="margin-top:20px">
         <div class="card-title"><i class="fas fa-book-open"></i> Historia</div>
-        <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7">
-            Nacimos con el objetivo de ofrecer una forma simple y confiable de comprar en línea.
-            Desde entonces, hemos crecido junto a nuestros clientes, ampliando nuestro catálogo
-            y mejorando cada día nuestro servicio para seguir siendo su primera opción.
-        </p>
+        <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= nl2br(htmlspecialchars($cfg['portal_historia'] ?? '')) ?></p>
     </div>
 
     <div class="corp-stats">

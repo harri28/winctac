@@ -10,6 +10,14 @@ $cfg = $cfgStmt->fetch();
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
+    $vision   = trim($_POST['portal_vision'] ?? '');
+    $mision   = trim($_POST['portal_mision'] ?? '');
+    $historia = trim($_POST['portal_historia'] ?? '');
+
+    $pdo->prepare('UPDATE config SET portal_vision = ?, portal_mision = ?, portal_historia = ?, updated_at = NOW() WHERE id = ?')
+        ->execute([$vision, $mision, $historia, TIENDA_ID]);
+    $success = 'Contenido actualizado correctamente.';
+
     if (!empty($_FILES['hero']['tmp_name'])) {
         $ext = strtolower(pathinfo($_FILES['hero']['name'], PATHINFO_EXTENSION));
         if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'])) {
@@ -19,12 +27,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
             if (move_uploaded_file($_FILES['hero']['tmp_name'], $dest)) {
                 $pdo->prepare('UPDATE config SET portal_hero_path = ?, updated_at = NOW() WHERE id = ?')
                     ->execute([$fname, TIENDA_ID]);
-                $cfgStmt->execute([TIENDA_ID]);
-                $cfg = $cfgStmt->fetch();
-                $success = 'Imagen de portada actualizada correctamente.';
+                $success = 'Imagen de portada y contenido actualizados correctamente.';
             }
         }
     }
+
+    $cfgStmt->execute([TIENDA_ID]);
+    $cfg = $cfgStmt->fetch();
 }
 ?>
 
@@ -54,6 +63,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
     <div class="form-group" style="margin-bottom:0">
         <label class="form-label">Reemplazar imagen</label>
         <input type="file" name="hero" class="form-control" accept="image/jpeg,image/png,image/webp">
+    </div>
+</div>
+
+<div class="card" style="max-width:640px;margin-top:20px">
+    <div class="card-title"><i class="fas fa-file-lines"></i> Visión, Misión e Historia</div>
+    <div class="form-hint" style="margin-bottom:16px">
+        Contenido que se muestra en la página pública "Nosotros"
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Visión</label>
+        <textarea name="portal_vision" class="form-control" rows="3"><?= htmlspecialchars($cfg['portal_vision'] ?? '') ?></textarea>
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Misión</label>
+        <textarea name="portal_mision" class="form-control" rows="3"><?= htmlspecialchars($cfg['portal_mision'] ?? '') ?></textarea>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Historia</label>
+        <textarea name="portal_historia" class="form-control" rows="4"><?= htmlspecialchars($cfg['portal_historia'] ?? '') ?></textarea>
     </div>
 </div>
 

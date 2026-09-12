@@ -163,6 +163,11 @@ $migraciones = [
     // ── Portal Web: imagen de portada de la página "Nosotros" ──
     'config_portal_hero_path' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_hero_path TEXT DEFAULT ''",
 
+    // ── Portal Web: Visión/Misión/Historia editables (antes fijas en nosotros.php) ──
+    'config_portal_vision'   => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_vision TEXT DEFAULT 'Ser la tienda online de referencia para nuestros clientes, reconocida por su confiabilidad, variedad y la calidad de su servicio.'",
+    'config_portal_mision'   => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_mision TEXT DEFAULT 'Brindar a cada cliente una experiencia de compra simple, segura y satisfactoria, todos los días.'",
+    'config_portal_historia' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_historia TEXT DEFAULT 'Nacimos con el objetivo de ofrecer una forma simple y confiable de comprar en línea. Desde entonces, hemos crecido junto a nuestros clientes, ampliando nuestro catálogo y mejorando cada día nuestro servicio para seguir siendo su primera opción.'",
+
     // ── Color de marca por tienda ──
     'config_color_primary' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS color_primary VARCHAR(7) DEFAULT '#dc2626'",
 
