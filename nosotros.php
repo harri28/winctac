@@ -65,7 +65,7 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
     </div>
 
     <div class="card" style="margin-top:20px">
-        <div class="card-title"><i class="fas fa-book-open"></i> Historia</div>
+        <div class="card-title"><i class="fas fa-book-open"></i> ¿Quiénes somos?</div>
         <p style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= nl2br(htmlspecialchars($cfg['portal_historia'] ?? '')) ?></p>
     </div>
 

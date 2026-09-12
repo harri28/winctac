@@ -67,7 +67,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
 </div>
 
 <div class="card" style="max-width:640px;margin-top:20px">
-    <div class="card-title"><i class="fas fa-file-lines"></i> Visión, Misión e Historia</div>
+    <div class="card-title"><i class="fas fa-file-lines"></i> Visión, Misión y ¿Quiénes somos?</div>
     <div class="form-hint" style="margin-bottom:16px">
         Contenido que se muestra en la página pública "Nosotros"
     </div>
@@ -83,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
     </div>
 
     <div class="form-group" style="margin-bottom:0">
-        <label class="form-label">Historia</label>
+        <label class="form-label">¿Quiénes somos?</label>
         <textarea name="portal_historia" class="form-control" rows="4"><?= htmlspecialchars($cfg['portal_historia'] ?? '') ?></textarea>
     </div>
 </div>
