@@ -143,7 +143,7 @@ $totalInactivos = count($productos) - $totalActivos;
 
 <!-- Modal crear/editar -->
 <div id="modal-producto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;align-items:safe center;justify-content:center;overflow-y:auto;padding:20px">
-    <div style="background:#fff;border-radius:var(--radius-lg);padding:28px;max-width:640px;width:92%;box-shadow:var(--shadow-lg);margin:auto 0">
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:28px;max-width:1280px;width:calc(100vw - 40px);box-shadow:var(--shadow-lg);margin:auto 0">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <h3 id="modal-titulo" style="font-weight:700;font-size:.95rem"><i class="fas fa-box"></i> Nuevo producto</h3>
             <button onclick="cerrarModal()" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--text-muted)">×</button>
@@ -157,88 +157,75 @@ $totalInactivos = count($productos) - $totalActivos;
         <div class="form-hint" style="text-align:center;margin-bottom:18px">Hasta 5 imágenes en total (la principal + 4 adicionales)</div>
 
         <div class="form-group">
-            <label class="form-label">Nombre <span style="color:var(--danger)">*</span></label>
-            <input type="text" id="f-nombre" class="form-control" placeholder="Ej: Jabón Antibacterial">
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group">
-                <label class="form-label">Código / SKU</label>
-                <input type="text" id="f-codigo" class="form-control" placeholder="Opcional">
-            </div>
-            <div class="form-group">
-                <label class="form-label">Marca</label>
-                <input type="text" id="f-marca" class="form-control" placeholder="Opcional">
-            </div>
-        </div>
-
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group">
-                <label class="form-label">Unidad de medida</label>
-                <input type="text" id="f-um" class="form-control" placeholder="Ej: UND, KG, CAJA">
-            </div>
-            <div class="form-group">
-                <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
-                    Categoría
-                    <span onclick="toggleNuevaCategoria()" style="cursor:pointer;color:var(--primary);font-weight:600;font-size:.78rem">
-                        <i class="fas fa-plus"></i> Nueva
-                    </span>
-                </label>
-                <select id="f-categoria" class="form-control">
-                    <option value="">— Sin categoría —</option>
-                    <?php foreach ($categorias as $cat): ?>
-                    <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nombre']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <div id="nueva-categoria-row" style="display:none;margin-top:6px;gap:6px">
-                    <input type="text" id="nueva-categoria-nombre" class="form-control" placeholder="Nombre de la categoría" style="font-size:.85rem"
-                           onkeydown="if(event.key==='Enter'){event.preventDefault();guardarNuevaCategoria();} if(event.key==='Escape'){toggleNuevaCategoria();}">
-                    <button type="button" class="btn btn-primary" onclick="guardarNuevaCategoria()" title="Guardar" style="padding:6px 10px">
-                        <i class="fas fa-check"></i>
-                    </button>
-                    <button type="button" class="btn btn-secondary" onclick="toggleNuevaCategoria()" title="Cancelar" style="padding:6px 10px">
-                        <i class="fas fa-times"></i>
-                    </button>
-                </div>
-            </div>
-        </div>
-
-        <div class="form-group">
-            <label class="form-label">Stock <span style="color:var(--danger)">*</span></label>
-            <input type="number" id="f-stock" class="form-control" step="1" min="0" placeholder="0" style="max-width:160px">
-        </div>
-
-        <div class="form-group" style="background:var(--surface-3);border-radius:var(--radius);padding:14px">
-            <label class="form-label">Costeo y precio de venta</label>
-
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-                <div>
-                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">Costo anterior (S/)</label>
-                    <input type="number" id="f-costo-anterior" class="form-control" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()">
-                </div>
-                <div>
-                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">Costo actual (S/)</label>
-                    <input type="number" id="f-costo-actual" class="form-control" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()">
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
-                <div>
-                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">% Mínimo</label>
-                    <input type="number" id="f-minimo-pct" class="form-control" step="0.01" placeholder="0.00" oninput="recalcularPrecio()">
-                </div>
-                <div>
-                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">% Lista</label>
-                    <input type="number" id="f-lista-pct" class="form-control" step="0.01" placeholder="0.00" oninput="recalcularPrecio()">
-                </div>
-            </div>
-
-            <div style="margin-top:12px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;line-height:1.9">
-                Resultado (variación de costo): <strong id="r-resultado">S/ 0.00</strong><br>
-                Precio mínimo: <strong id="r-precio-min">S/ 0.00</strong> · Utilidad: <strong id="r-utilidad-min">S/ 0.00</strong><br>
-                <span style="font-size:.95rem">Precio de venta: <strong id="r-precio-lista" style="color:var(--primary)">S/ 0.00</strong></span> · Utilidad: <strong id="r-utilidad-lista">S/ 0.00</strong>
+            <label class="form-label">Datos del producto <span style="color:var(--text-muted);font-size:.75rem;font-weight:400">(orden tipo hoja de costeo)</span></label>
+            <div style="overflow-x:auto;border:1px solid var(--border);border-radius:var(--radius-sm)">
+                <table class="planilla-table">
+                    <thead>
+                        <tr>
+                            <th rowspan="2">ITEM</th>
+                            <th rowspan="2">CÓDIGO</th>
+                            <th rowspan="2">DESCRIPCIÓN</th>
+                            <th rowspan="2">MARCA</th>
+                            <th rowspan="2">UM</th>
+                            <th colspan="3">COSTO</th>
+                            <th colspan="3">MÍNIMO</th>
+                            <th colspan="3">LISTA</th>
+                            <th rowspan="2">STOCK</th>
+                        </tr>
+                        <tr>
+                            <th>Anterior S/</th><th>Actual S/</th><th>Resultado</th>
+                            <th>%</th><th>Precio S/</th><th>Utilidad S/</th>
+                            <th>%</th><th>Precio S/</th><th>Utilidad S/</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td id="planilla-item" class="planilla-readonly" style="width:40px">—</td>
+                            <td><input type="text" id="f-codigo" class="planilla-input" style="width:80px" placeholder="Opcional"></td>
+                            <td><input type="text" id="f-nombre" class="planilla-input" style="width:200px;text-align:left" placeholder="Ej: Jabón Antibacterial"></td>
+                            <td><input type="text" id="f-marca" class="planilla-input" style="width:90px" placeholder="Opcional"></td>
+                            <td><input type="text" id="f-um" class="planilla-input" style="width:55px" placeholder="UND"></td>
+                            <td><input type="number" id="f-costo-anterior" class="planilla-input" style="width:75px" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()"></td>
+                            <td><input type="number" id="f-costo-actual" class="planilla-input" style="width:75px" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()"></td>
+                            <td id="r-resultado" class="planilla-readonly" style="width:65px">0.00</td>
+                            <td><input type="number" id="f-minimo-pct" class="planilla-input" style="width:55px" step="0.01" placeholder="0.00" oninput="recalcularPrecio()"></td>
+                            <td id="r-precio-min" class="planilla-readonly" style="width:70px">0.00</td>
+                            <td id="r-utilidad-min" class="planilla-readonly" style="width:70px">0.00</td>
+                            <td><input type="number" id="f-lista-pct" class="planilla-input" style="width:55px" step="0.01" placeholder="0.00" oninput="recalcularPrecio()"></td>
+                            <td id="r-precio-lista" class="planilla-readonly" style="width:75px;color:var(--primary);font-weight:700">0.00</td>
+                            <td id="r-utilidad-lista" class="planilla-readonly" style="width:70px">0.00</td>
+                            <td><input type="number" id="f-stock" class="planilla-input" style="width:60px" step="1" min="0" placeholder="0"></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
             <div class="form-hint">
-                El precio de venta se calcula solo (Costo actual × (1 + % Lista)). Si dejas "Costo actual" en 0, se conserva el precio que ya tenía el producto.
+                El precio de venta (columna LISTA → Precio S/) se calcula solo, con Costo actual × (1 + % Lista). Si dejas "Costo actual" en 0, se conserva el precio que ya tenía el producto. El nombre del producto va en la columna DESCRIPCIÓN.
+            </div>
+        </div>
+
+        <div class="form-group" style="max-width:280px">
+            <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
+                Categoría
+                <span onclick="toggleNuevaCategoria()" style="cursor:pointer;color:var(--primary);font-weight:600;font-size:.78rem">
+                    <i class="fas fa-plus"></i> Nueva
+                </span>
+            </label>
+            <select id="f-categoria" class="form-control">
+                <option value="">— Sin categoría —</option>
+                <?php foreach ($categorias as $cat): ?>
+                <option value="<?= $cat['id'] ?>"><?= htmlspecialchars($cat['nombre']) ?></option>
+                <?php endforeach; ?>
+            </select>
+            <div id="nueva-categoria-row" style="display:none;margin-top:6px;gap:6px">
+                <input type="text" id="nueva-categoria-nombre" class="form-control" placeholder="Nombre de la categoría" style="font-size:.85rem"
+                       onkeydown="if(event.key==='Enter'){event.preventDefault();guardarNuevaCategoria();} if(event.key==='Escape'){toggleNuevaCategoria();}">
+                <button type="button" class="btn btn-primary" onclick="guardarNuevaCategoria()" title="Guardar" style="padding:6px 10px">
+                    <i class="fas fa-check"></i>
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="toggleNuevaCategoria()" title="Cancelar" style="padding:6px 10px">
+                    <i class="fas fa-times"></i>
+                </button>
             </div>
         </div>
 
@@ -294,6 +281,30 @@ $totalInactivos = count($productos) - $totalActivos;
 </div>
 
 <style>
+.planilla-table { border-collapse: collapse; white-space: nowrap; }
+.planilla-table th, .planilla-table td { border: 1px solid var(--border); padding: 4px; text-align: center; }
+.planilla-table thead th {
+    background: var(--surface-3);
+    font-weight: 700;
+    font-size: .64rem;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    letter-spacing: .02em;
+}
+.planilla-input {
+    width: 100%;
+    border: 1px solid transparent;
+    border-radius: 4px;
+    padding: 5px 4px;
+    font-size: .78rem;
+    font-family: inherit;
+    text-align: center;
+    background: transparent;
+}
+.planilla-input:focus { outline: none; border-color: var(--primary); background: #fff; }
+.planilla-input::placeholder { color: var(--text-light); }
+.planilla-readonly { font-size: .78rem; font-weight: 600; color: var(--text-muted); }
+
 .toggle-track {
     width: 40px; height: 22px;
     background: var(--border);
@@ -337,11 +348,11 @@ function recalcularPrecio() {
     const precioLista    = costoAct > 0 ? costoAct * (1 + listaPct / 100) : precioActualProducto;
     const utilidadLista  = costoAct > 0 ? precioLista - costoAct : 0;
 
-    document.getElementById('r-resultado').textContent    = 'S/ ' + resultado.toFixed(2);
-    document.getElementById('r-precio-min').textContent   = 'S/ ' + precioMin.toFixed(2);
-    document.getElementById('r-utilidad-min').textContent = 'S/ ' + utilidadMin.toFixed(2);
-    document.getElementById('r-precio-lista').textContent = 'S/ ' + precioLista.toFixed(2);
-    document.getElementById('r-utilidad-lista').textContent = 'S/ ' + utilidadLista.toFixed(2);
+    document.getElementById('r-resultado').textContent    = resultado.toFixed(2);
+    document.getElementById('r-precio-min').textContent   = precioMin.toFixed(2);
+    document.getElementById('r-utilidad-min').textContent = utilidadMin.toFixed(2);
+    document.getElementById('r-precio-lista').textContent = precioLista.toFixed(2);
+    document.getElementById('r-utilidad-lista').textContent = utilidadLista.toFixed(2);
 }
 
 // ── IMÁGENES ADICIONALES (hasta 4, + la principal = 5 en total) ──
@@ -549,6 +560,7 @@ function abrirNuevo() {
     modalProductoId = 0;
     modalImagenActual = '';
     document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-box"></i> Nuevo producto';
+    document.getElementById('planilla-item').textContent = 'Nuevo';
     document.getElementById('f-nombre').value = '';
     document.getElementById('f-codigo').value = '';
     document.getElementById('f-marca').value = '';
@@ -580,6 +592,7 @@ function abrirEditar(p) {
     modalProductoId = p.id;
     modalImagenActual = p.imagen_path || '';
     document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-edit"></i> Editar producto';
+    document.getElementById('planilla-item').textContent = '#' + p.id;
     document.getElementById('f-nombre').value = p.nombre || '';
     document.getElementById('f-codigo').value = p.codigo || '';
     document.getElementById('f-marca').value = p.marca || '';
