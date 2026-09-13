@@ -30,10 +30,6 @@ $imgExtraStmt = $pdo->prepare("SELECT imagen_path FROM producto_imagenes WHERE p
 $imgExtraStmt->execute([$id]);
 $imagenesExtra = array_map(fn($p) => $imgBase . $p, $imgExtraStmt->fetchAll(PDO::FETCH_COLUMN));
 
-$fichaStmt = $pdo->prepare("SELECT nombre_campo, valor FROM producto_ficha_tecnica WHERE producto_id = ? AND valor <> '' ORDER BY orden ASC, id ASC");
-$fichaStmt->execute([$id]);
-$fichaTecnica = $fichaStmt->fetchAll();
-
 $nombre    = $producto['nombre'];
 $precio    = floatval($producto['precio']);
 $stock     = intval($producto['stock'] ?? 0);
@@ -167,21 +163,6 @@ require_once __DIR__ . '/includes/header.php';
             </div>
         </div>
     </div>
-
-    <?php if ($fichaTecnica): ?>
-    <!-- ── FICHA TÉCNICA ── -->
-    <div style="margin-top:24px;max-width:860px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:20px">
-        <h2 class="section-title" style="margin-bottom:14px"><i class="fas fa-clipboard-list"></i> Ficha técnica</h2>
-        <table style="width:100%;border-collapse:collapse">
-            <?php foreach ($fichaTecnica as $f): ?>
-            <tr style="border-bottom:1px solid var(--border)">
-                <th style="text-align:left;padding:10px 12px;width:200px;color:var(--text-muted);font-weight:600;font-size:.85rem;vertical-align:top"><?= htmlspecialchars($f['nombre_campo']) ?></th>
-                <td style="padding:10px 12px;font-size:.88rem;color:var(--text)"><?= nl2br(htmlspecialchars($f['valor'])) ?></td>
-            </tr>
-            <?php endforeach; ?>
-        </table>
-    </div>
-    <?php endif; ?>
 
     <!-- ── PRODUCTOS RELACIONADOS ── -->
     <div id="relacionados-section" style="margin-top:40px">

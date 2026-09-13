@@ -213,36 +213,7 @@ try {
                 }
             }
 
-            // Ficha técnica: filas libres nombre/valor (llegan como JSON desde el
-            // formulario). Se reemplaza la lista completa por la enviada, igual que
-            // con las imágenes adicionales — más simple que hacer diff fila por fila.
-            $fichaRaw = json_decode($_POST['ficha_tecnica'] ?? '[]', true);
-            $pdo->prepare('DELETE FROM producto_ficha_tecnica WHERE producto_id = ?')->execute([$productoId]);
-            if (is_array($fichaRaw)) {
-                $insFicha = $pdo->prepare('INSERT INTO producto_ficha_tecnica (producto_id, nombre_campo, valor, orden) VALUES (?, ?, ?, ?)');
-                $orden = 0;
-                foreach ($fichaRaw as $fila) {
-                    $campo = trim(mb_substr((string)($fila['nombre'] ?? ''), 0, 100));
-                    $valor = trim(mb_substr((string)($fila['valor'] ?? ''), 0, 500));
-                    if ($campo === '') continue;
-                    $insFicha->execute([$productoId, $campo, $valor, $orden++]);
-                }
-            }
-
             echo json_encode(['success' => true, 'id' => $productoId]);
-            break;
-
-        // Ficha técnica de un producto (para precargar el modal de edición)
-        case 'ficha_tecnica_producto':
-            $productoId = intval($_GET['producto_id'] ?? 0);
-            $ficha = $pdo->prepare('
-                SELECT ft.nombre_campo, ft.valor FROM producto_ficha_tecnica ft
-                JOIN productos p ON p.id = ft.producto_id
-                WHERE ft.producto_id = ? AND p.tienda_id = ?
-                ORDER BY ft.orden ASC, ft.id ASC
-            ');
-            $ficha->execute([$productoId, TIENDA_ID]);
-            echo json_encode(['success' => true, 'data' => $ficha->fetchAll()]);
             break;
 
         // Imágenes adicionales de un producto (para precargar el modal de edición)

@@ -246,17 +246,6 @@ $totalInactivos = count($productos) - $totalActivos;
         </div>
 
         <div class="form-group">
-            <label class="form-label">
-                Ficha técnica <span style="color:var(--text-muted);font-size:.75rem;font-weight:400">(se muestra al cliente en la página del producto)</span>
-            </label>
-            <div id="ficha-tecnica-rows"></div>
-            <button type="button" class="btn btn-secondary" onclick="agregarFilaFicha()" style="font-size:.78rem;padding:5px 10px">
-                <i class="fas fa-plus"></i> Agregar campo
-            </button>
-            <div class="form-hint">Deja el valor en blanco para que ese campo no se muestre en la tienda.</div>
-        </div>
-
-        <div class="form-group">
             <label class="form-label">Imagen</label>
             <input type="file" id="f-imagen" class="form-control" accept="image/*" onchange="previewImagen(this)">
             <div class="form-hint">JPG, PNG, WEBP — Recomendado: 400×400px</div>
@@ -293,16 +282,17 @@ $totalInactivos = count($productos) - $totalActivos;
 }
 .planilla-input {
     width: 100%;
-    border: 1px solid transparent;
+    border: 1px solid #93c5fd;
     border-radius: 4px;
     padding: 5px 4px;
     font-size: .78rem;
     font-family: inherit;
     text-align: center;
-    background: transparent;
+    background: #eff6ff;
+    color: #1e3a8a;
 }
-.planilla-input:focus { outline: none; border-color: var(--primary); background: #fff; }
-.planilla-input::placeholder { color: var(--text-light); }
+.planilla-input:focus { outline: none; border-color: #2563eb; background: #fff; box-shadow: 0 0 0 2px rgba(37,99,235,.15); }
+.planilla-input::placeholder { color: #93b8ec; }
 /* Sin flechas de subir/bajar en los campos numéricos de la fila */
 .planilla-input[type="number"] { -moz-appearance: textfield; }
 .planilla-input::-webkit-outer-spin-button,
@@ -310,7 +300,13 @@ $totalInactivos = count($productos) - $totalActivos;
     -webkit-appearance: none;
     margin: 0;
 }
-.planilla-readonly { font-size: .78rem; font-weight: 600; color: var(--text-muted); }
+.planilla-readonly {
+    font-size: .78rem;
+    font-weight: 600;
+    color: var(--text-muted);
+    background: var(--surface-3);
+    cursor: not-allowed;
+}
 
 .toggle-track {
     width: 40px; height: 22px;
@@ -460,40 +456,6 @@ async function cargarImagenesExtra(productoId) {
     } catch (e) {}
 }
 
-// ── FICHA TÉCNICA (filas libres nombre/valor, sin plantilla fija) ──
-const FICHA_TECNICA_DEFAULT = ['Peso', 'Tamaño', 'Color', 'Fecha de fabricación'];
-
-function limpiarFilasFicha() {
-    document.getElementById('ficha-tecnica-rows').innerHTML = '';
-}
-
-function agregarFilaFicha(nombre = '', valor = '') {
-    const row = document.createElement('div');
-    row.className = 'ficha-row';
-    row.style.cssText = 'display:flex;gap:8px;margin-bottom:6px';
-    row.innerHTML = `
-        <input type="text" class="form-control ficha-nombre" placeholder="Nombre (ej: Peso)" style="flex:1;font-size:.85rem">
-        <input type="text" class="form-control ficha-valor" placeholder="Valor (ej: 5 kg)" style="flex:1;font-size:.85rem">
-        <button type="button" class="btn btn-secondary" onclick="this.closest('.ficha-row').remove()" style="padding:6px 10px" title="Quitar campo">
-            <i class="fas fa-times"></i>
-        </button>`;
-    row.querySelector('.ficha-nombre').value = nombre;
-    row.querySelector('.ficha-valor').value = valor;
-    document.getElementById('ficha-tecnica-rows').appendChild(row);
-}
-
-async function cargarFichaTecnica(productoId) {
-    try {
-        const res  = await fetch(window.BASE_URL + '/admin/api.php?action=ficha_tecnica_producto&producto_id=' + productoId);
-        const data = await res.json();
-        if (data.success && data.data.length) {
-            data.data.forEach(f => agregarFilaFicha(f.nombre_campo, f.valor));
-            return;
-        }
-    } catch (e) {}
-    FICHA_TECNICA_DEFAULT.forEach(n => agregarFilaFicha(n, ''));
-}
-
 fetch(window.BASE_URL + '/admin/api.php?action=etiquetas_sugeridas')
     .then(r => r.json())
     .then(d => { if (d.success) todasLasEtiquetas = d.data; })
@@ -589,8 +551,6 @@ function abrirNuevo() {
     tagsActuales = [];
     renderTags();
     resetExtraSlots();
-    limpiarFilasFicha();
-    FICHA_TECNICA_DEFAULT.forEach(n => agregarFilaFicha(n, ''));
     cerrarNuevaCategoria();
     document.getElementById('modal-producto').style.display = 'flex';
 }
@@ -632,9 +592,6 @@ function abrirEditar(p) {
 
     resetExtraSlots();
     cargarImagenesExtra(p.id);
-
-    limpiarFilasFicha();
-    cargarFichaTecnica(p.id);
 
     cerrarNuevaCategoria();
     document.getElementById('modal-producto').style.display = 'flex';
@@ -783,11 +740,6 @@ async function guardarProducto() {
     form.append('stock', stock);
     form.append('descripcion', document.getElementById('f-descripcion').value.trim());
     form.append('etiquetas', JSON.stringify(tagsActuales));
-
-    const fichaTecnica = [...document.querySelectorAll('.ficha-row')]
-        .map(r => ({ nombre: r.querySelector('.ficha-nombre').value.trim(), valor: r.querySelector('.ficha-valor').value.trim() }))
-        .filter(f => f.nombre);
-    form.append('ficha_tecnica', JSON.stringify(fichaTecnica));
 
     form.append('activo', document.getElementById('f-activo').checked ? '1' : '0');
     const imgFile = document.getElementById('f-imagen').files[0];
