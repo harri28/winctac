@@ -229,7 +229,7 @@ function paginaUrl(int $n, string $buscar, string $cat, string $estado): string 
         <div id="img-gallery" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
             <div id="modal-img-preview" style="display:none;width:clamp(64px,18vw,100px);height:clamp(64px,18vw,100px);border-radius:10px;background:var(--surface-3);overflow:hidden;align-items:center;justify-content:center;color:var(--text-light)"></div>
         </div>
-        <div class="form-hint" style="text-align:center;margin-bottom:18px">Hasta 5 imágenes en total (la principal + 4 adicionales)</div>
+        <div class="form-hint" style="text-align:center;margin-bottom:18px">Hasta 5 imágenes en total (la principal + 4 adicionales) — copia una imagen y pégala aquí con Ctrl+V</div>
 
         <div class="form-group">
             <label class="form-label">Datos del producto <span style="color:var(--text-muted);font-size:.75rem;font-weight:400">(orden tipo hoja de costeo)</span></label>
@@ -445,6 +445,29 @@ function resetExtraSlots() {
     eliminarImagenesIds = [];
     renderExtraGallery();
 }
+
+// Pegar una imagen copiada (ej. de Google) directamente con Ctrl+V, sin tener
+// que descargarla y subirla como archivo. Solo actúa si el portapapeles trae
+// una imagen — si es texto (pegando en Nombre, Descripción, etc.) no hace nada
+// y deja que el pegado normal siga su curso.
+document.getElementById('modal-producto').addEventListener('paste', (e) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+    for (const item of items) {
+        if (item.type && item.type.startsWith('image/')) {
+            const blob = item.getAsFile();
+            if (!blob) continue;
+            e.preventDefault();
+            if (extraSlots.length >= MAX_EXTRA) {
+                showToast('Ya tienes el máximo de 4 imágenes adicionales', 'error');
+                return;
+            }
+            extraSlots.push({file: blob});
+            renderExtraGallery();
+            return;
+        }
+    }
+});
 
 function extraSlotHTML(n) {
     return `<div class="img-extra-slot" data-slot="${n}" onclick="clickExtraSlot(${n})"
