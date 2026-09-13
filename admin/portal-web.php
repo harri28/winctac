@@ -110,7 +110,7 @@ $__rte = function (string $field, string $valor, int $minRows) {
 </div>
 </div>
 
-<div style="margin-top:20px">
+<div style="margin-top:20px;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:10px">
     <button type="submit" name="save_portal" class="btn btn-primary btn-lg">
         <i class="fas fa-save"></i> Guardar
     </button>
