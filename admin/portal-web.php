@@ -10,9 +10,9 @@ $cfg = $cfgStmt->fetch();
 $success = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
-    $vision   = trim($_POST['portal_vision'] ?? '');
-    $mision   = trim($_POST['portal_mision'] ?? '');
-    $historia = trim($_POST['portal_historia'] ?? '');
+    $vision   = sanitizarRichText(trim($_POST['portal_vision'] ?? ''));
+    $mision   = sanitizarRichText(trim($_POST['portal_mision'] ?? ''));
+    $historia = sanitizarRichText(trim($_POST['portal_historia'] ?? ''));
 
     $pdo->prepare('UPDATE config SET portal_vision = ?, portal_mision = ?, portal_historia = ?, updated_at = NOW() WHERE id = ?')
         ->execute([$vision, $mision, $historia, TIENDA_ID]);
@@ -45,6 +45,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
 <?php endif; ?>
 
+<?php
+// Imprime la barra de herramientas + el editor + el input oculto que se
+// sincroniza justo antes de enviar el formulario, para un campo dado.
+$__rte = function (string $field, string $valor, int $minRows) {
+    $lineHeight = 20;
+    $minHeight  = $minRows * $lineHeight + 16;
+    ?>
+    <div class="rte-toolbar">
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="bold" title="Negrita"><i class="fas fa-bold"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyLeft" title="Alinear a la izquierda"><i class="fas fa-align-left"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyCenter" title="Centrar"><i class="fas fa-align-center"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyRight" title="Alinear a la derecha"><i class="fas fa-align-right"></i></button>
+    </div>
+    <div id="rte-<?= $field ?>" class="form-control rte-editable" style="min-height:<?= $minHeight ?>px" contenteditable="true"><?= renderRichText($valor) ?></div>
+    <input type="hidden" name="portal_<?= $field ?>" id="rte-<?= $field ?>-input">
+    <?php
+};
+?>
+
 <form method="POST" enctype="multipart/form-data">
 <div class="card" style="max-width:640px">
     <div class="card-title"><i class="fas fa-image"></i> Imagen de portada — página "Nosotros"</div>
@@ -74,17 +94,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
 
     <div class="form-group">
         <label class="form-label">Visión</label>
-        <textarea name="portal_vision" class="form-control" rows="3"><?= htmlspecialchars($cfg['portal_vision'] ?? '') ?></textarea>
+        <?php $__rte('vision', $cfg['portal_vision'] ?? '', 3) ?>
     </div>
 
     <div class="form-group">
         <label class="form-label">Misión</label>
-        <textarea name="portal_mision" class="form-control" rows="3"><?= htmlspecialchars($cfg['portal_mision'] ?? '') ?></textarea>
+        <?php $__rte('mision', $cfg['portal_mision'] ?? '', 3) ?>
     </div>
 
     <div class="form-group" style="margin-bottom:0">
         <label class="form-label">¿Quiénes somos?</label>
-        <textarea name="portal_historia" class="form-control" rows="4"><?= htmlspecialchars($cfg['portal_historia'] ?? '') ?></textarea>
+        <?php $__rte('historia', $cfg['portal_historia'] ?? '', 4) ?>
     </div>
 </div>
 
@@ -99,3 +119,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
 </form>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
+
+<script>
+document.querySelectorAll('.rte-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        const target = document.getElementById(btn.dataset.target);
+        target.focus();
+        document.execCommand(btn.dataset.cmd, false, null);
+    });
+});
+
+document.querySelector('form').addEventListener('submit', () => {
+    ['vision', 'mision', 'historia'].forEach(f => {
+        document.getElementById('rte-' + f + '-input').value = document.getElementById('rte-' + f).innerHTML;
+    });
+});
+</script>

@@ -700,6 +700,21 @@ img { max-width: 100%; display: block; }
 .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,116,144,.12); }
 .form-control::placeholder { color: var(--text-light); }
 .form-hint { font-size: .78rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ── Editor de texto enriquecido básico (Portal Web) ── */
+.rte-toolbar { display: flex; gap: 4px; margin-bottom: 6px; }
+.rte-btn {
+    padding: 6px 11px;
+    border: 1.5px solid var(--border);
+    border-radius: var(--radius-sm);
+    background: var(--surface);
+    color: var(--text-muted);
+    font-size: .8rem;
+    cursor: pointer;
+}
+.rte-btn:hover { background: var(--surface-3); color: var(--text); }
+.rte-editable { line-height: 1.6; overflow-y: auto; cursor: text; }
+.rte-editable:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(14,116,144,.12); }
 .form-error { font-size: .8rem; color: var(--danger); margin-top: 4px; }
 
 /* ── CARD ── */
