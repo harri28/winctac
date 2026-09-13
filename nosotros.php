@@ -15,7 +15,10 @@ $numProductos = (int) $numProdStmt->fetchColumn();
 $numCatStmt = $pdo->prepare("SELECT COUNT(*) FROM categorias WHERE activo = TRUE AND tienda_id = ?");
 $numCatStmt->execute([TIENDA_ID]);
 $numCategorias = (int) $numCatStmt->fetchColumn();
-$numEnvios     = (int) $pdo->query("SELECT COUNT(*) FROM empresas_envio WHERE activo = TRUE")->fetchColumn();
+
+// Si el admin no fijó un valor propio en Portal Web, se usa el conteo real.
+$statProductos = ($cfg['portal_stat_productos'] ?? '') !== '' ? $cfg['portal_stat_productos'] : ($numProductos . '+');
+$statCategorias = ($cfg['portal_stat_categorias'] ?? '') !== '' ? $cfg['portal_stat_categorias'] : (string) $numCategorias;
 
 $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' . $cfg['portal_hero_path']))
     ? UPLOADS_URL . '/' . htmlspecialchars($cfg['portal_hero_path'])
@@ -71,16 +74,12 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
 
     <div class="corp-stats">
         <div class="corp-stat">
-            <div class="corp-stat-num"><?= $numProductos ?>+</div>
+            <div class="corp-stat-num"><?= htmlspecialchars($statProductos) ?></div>
             <div class="corp-stat-label">Productos</div>
         </div>
         <div class="corp-stat">
-            <div class="corp-stat-num"><?= $numCategorias ?></div>
+            <div class="corp-stat-num"><?= htmlspecialchars($statCategorias) ?></div>
             <div class="corp-stat-label">Categorías</div>
-        </div>
-        <div class="corp-stat">
-            <div class="corp-stat-num"><?= $numEnvios ?></div>
-            <div class="corp-stat-label">Empresas de envío</div>
         </div>
     </div>
 

@@ -741,6 +741,11 @@ img { max-width: 100%; display: block; }
     gap: 20px;
     align-items: start;
 }
+.portal-web-col-left {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
 @media (max-width: 900px) {
     .portal-web-grid { grid-template-columns: 1fr; }
 }

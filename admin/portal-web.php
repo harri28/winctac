@@ -9,13 +9,23 @@ $cfgStmt->execute([TIENDA_ID]);
 $cfg = $cfgStmt->fetch();
 $success = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
-    $vision   = sanitizarRichText(trim($_POST['portal_vision'] ?? ''));
-    $mision   = sanitizarRichText(trim($_POST['portal_mision'] ?? ''));
-    $historia = sanitizarRichText(trim($_POST['portal_historia'] ?? ''));
+$numProdStmt = $pdo->prepare('SELECT COUNT(*) FROM productos WHERE activo = TRUE AND tienda_id = ?');
+$numProdStmt->execute([TIENDA_ID]);
+$numProductosReal = (int) $numProdStmt->fetchColumn();
 
-    $pdo->prepare('UPDATE config SET portal_vision = ?, portal_mision = ?, portal_historia = ?, updated_at = NOW() WHERE id = ?')
-        ->execute([$vision, $mision, $historia, TIENDA_ID]);
+$numCatStmt = $pdo->prepare('SELECT COUNT(*) FROM categorias WHERE activo = TRUE AND tienda_id = ?');
+$numCatStmt->execute([TIENDA_ID]);
+$numCategoriasReal = (int) $numCatStmt->fetchColumn();
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
+    $vision        = sanitizarRichText(trim($_POST['portal_vision'] ?? ''));
+    $mision        = sanitizarRichText(trim($_POST['portal_mision'] ?? ''));
+    $historia      = sanitizarRichText(trim($_POST['portal_historia'] ?? ''));
+    $statProductos = trim(mb_substr($_POST['portal_stat_productos'] ?? '', 0, 20));
+    $statCategorias = trim(mb_substr($_POST['portal_stat_categorias'] ?? '', 0, 20));
+
+    $pdo->prepare('UPDATE config SET portal_vision = ?, portal_mision = ?, portal_historia = ?, portal_stat_productos = ?, portal_stat_categorias = ?, updated_at = NOW() WHERE id = ?')
+        ->execute([$vision, $mision, $historia, $statProductos, $statCategorias, TIENDA_ID]);
     $success = 'Contenido actualizado correctamente.';
 
     if (!empty($_FILES['hero']['tmp_name'])) {
@@ -68,6 +78,7 @@ $__rte = function (string $field, string $valor, int $minRows) {
 
 <form method="POST" enctype="multipart/form-data">
 <div class="portal-web-grid">
+<div class="portal-web-col-left">
 <div class="card">
     <div class="card-title"><i class="fas fa-image"></i> Imagen de portada — página "Nosotros"</div>
     <div class="form-hint" style="margin-bottom:16px">
@@ -86,6 +97,28 @@ $__rte = function (string $field, string $valor, int $minRows) {
         <label class="form-label">Reemplazar imagen</label>
         <input type="file" name="hero" class="form-control" accept="image/jpeg,image/png,image/webp">
     </div>
+</div>
+
+<div class="card">
+    <div class="card-title"><i class="fas fa-chart-simple"></i> Estadísticas</div>
+    <div class="form-hint" style="margin-bottom:16px">
+        Cifras que se muestran en "Nosotros". Déjalas vacías para usar el conteo real de tu catálogo.
+    </div>
+
+    <div class="form-group">
+        <label class="form-label">Productos</label>
+        <input type="text" name="portal_stat_productos" class="form-control" maxlength="20"
+               placeholder="<?= $numProductosReal ?>+" value="<?= htmlspecialchars($cfg['portal_stat_productos'] ?? '') ?>">
+        <div class="form-hint">Automático ahora mismo: <?= $numProductosReal ?>+ productos activos</div>
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Categorías</label>
+        <input type="text" name="portal_stat_categorias" class="form-control" maxlength="20"
+               placeholder="<?= $numCategoriasReal ?>" value="<?= htmlspecialchars($cfg['portal_stat_categorias'] ?? '') ?>">
+        <div class="form-hint">Automático ahora mismo: <?= $numCategoriasReal ?> categorías activas</div>
+    </div>
+</div>
 </div>
 
 <div class="card">

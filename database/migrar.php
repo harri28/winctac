@@ -168,6 +168,10 @@ $migraciones = [
     'config_portal_mision'   => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_mision TEXT DEFAULT 'Brindar a cada cliente una experiencia de compra simple, segura y satisfactoria, todos los días.'",
     'config_portal_historia' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_historia TEXT DEFAULT 'Nacimos con el objetivo de ofrecer una forma simple y confiable de comprar en línea. Desde entonces, hemos crecido junto a nuestros clientes, ampliando nuestro catálogo y mejorando cada día nuestro servicio para seguir siendo su primera opción.'",
 
+    // ── Portal Web: cifras de "Nosotros" editables (vacío = se usa el conteo real) ──
+    'config_portal_stat_productos'  => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_stat_productos VARCHAR(20) DEFAULT ''",
+    'config_portal_stat_categorias' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_stat_categorias VARCHAR(20) DEFAULT ''",
+
     // ── Color de marca por tienda ──
     'config_color_primary' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS color_primary VARCHAR(7) DEFAULT '#dc2626'",
 
