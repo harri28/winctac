@@ -66,7 +66,8 @@ $__rte = function (string $field, string $valor, int $minRows) {
 ?>
 
 <form method="POST" enctype="multipart/form-data">
-<div class="card" style="max-width:640px">
+<div class="portal-web-grid">
+<div class="card">
     <div class="card-title"><i class="fas fa-image"></i> Imagen de portada — página "Nosotros"</div>
     <div class="form-hint" style="margin-bottom:16px">
         Foto grande que se muestra en el encabezado de la página pública "Nosotros"
@@ -86,7 +87,7 @@ $__rte = function (string $field, string $valor, int $minRows) {
     </div>
 </div>
 
-<div class="card" style="max-width:640px;margin-top:20px">
+<div class="card">
     <div class="card-title"><i class="fas fa-file-lines"></i> Visión, Misión y ¿Quiénes somos?</div>
     <div class="form-hint" style="margin-bottom:16px">
         Contenido que se muestra en la página pública "Nosotros"
@@ -107,8 +108,9 @@ $__rte = function (string $field, string $valor, int $minRows) {
         <?php $__rte('historia', $cfg['portal_historia'] ?? '', 4) ?>
     </div>
 </div>
+</div>
 
-<div style="margin-top:20px;max-width:640px">
+<div style="margin-top:20px">
     <button type="submit" name="save_portal" class="btn btn-primary btn-lg">
         <i class="fas fa-save"></i> Guardar
     </button>
