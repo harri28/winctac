@@ -200,6 +200,7 @@ try {
 
             // Subir las nuevas (slots imagen_extra_1..4)
             $insExtra = $pdo->prepare('INSERT INTO producto_imagenes (producto_id, imagen_path, orden) VALUES (?, ?, ?)');
+            $primeraExtraSubida = null;
             for ($i = 1; $i <= 4; $i++) {
                 $campo = "imagen_extra_$i";
                 if (empty($_FILES[$campo]['tmp_name'])) continue;
@@ -210,6 +211,19 @@ try {
                 $fname = 'prod_' . time() . '_' . rand(100, 999) . '_' . $i . '.' . $ext;
                 if (move_uploaded_file($_FILES[$campo]['tmp_name'], $dir . '/' . $fname)) {
                     $insExtra->execute([$productoId, $fname, $i]);
+                    if ($primeraExtraSubida === null) $primeraExtraSubida = $fname;
+                }
+            }
+
+            // Si el producto todavía no tiene imagen principal, la primera imagen
+            // adicional recién subida también se usa como principal, para que
+            // aparezca en los listados sin tener que usar el campo "Imagen" aparte.
+            if ($primeraExtraSubida !== null) {
+                $tieneImagen = $pdo->prepare('SELECT imagen_path FROM productos WHERE id = ? AND tienda_id = ?');
+                $tieneImagen->execute([$productoId, TIENDA_ID]);
+                if (empty($tieneImagen->fetchColumn())) {
+                    $pdo->prepare('UPDATE productos SET imagen_path = ? WHERE id = ? AND tienda_id = ?')
+                        ->execute([$primeraExtraSubida, $productoId, TIENDA_ID]);
                 }
             }
 

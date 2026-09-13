@@ -227,9 +227,7 @@ function paginaUrl(int $n, string $buscar, string $cat, string $estado): string 
         </div>
 
         <div id="img-gallery" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
-            <div id="modal-img-preview" style="width:clamp(64px,18vw,100px);height:clamp(64px,18vw,100px);border-radius:10px;background:var(--surface-3);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
-                <i class="fas fa-image fa-2x"></i>
-            </div>
+            <div id="modal-img-preview" style="display:none;width:clamp(64px,18vw,100px);height:clamp(64px,18vw,100px);border-radius:10px;background:var(--surface-3);overflow:hidden;align-items:center;justify-content:center;color:var(--text-light)"></div>
         </div>
         <div class="form-hint" style="text-align:center;margin-bottom:18px">Hasta 5 imágenes en total (la principal + 4 adicionales)</div>
 
@@ -607,7 +605,9 @@ function abrirNuevo() {
     document.getElementById('f-descripcion').value = '';
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-activo').checked = true;
-    document.getElementById('modal-img-preview').innerHTML = '<i class="fas fa-image fa-2x"></i>';
+    const previewNuevo = document.getElementById('modal-img-preview');
+    previewNuevo.innerHTML = '';
+    previewNuevo.style.display = 'none';
     document.getElementById('modal-msg').style.display = 'none';
     document.getElementById('qr-section').style.display = 'none';
     tagsActuales = [];
@@ -640,9 +640,13 @@ function abrirEditar(p) {
     document.getElementById('modal-msg').style.display = 'none';
 
     const preview = document.getElementById('modal-img-preview');
-    preview.innerHTML = modalImagenActual
-        ? `<img src="${window.BASE_URL}/uploads/productos/${modalImagenActual}" style="width:100%;height:100%;object-fit:contain;padding:6px">`
-        : '<i class="fas fa-image fa-2x"></i>';
+    if (modalImagenActual) {
+        preview.style.display = 'flex';
+        preview.innerHTML = `<img src="${window.BASE_URL}/uploads/productos/${modalImagenActual}" style="width:100%;height:100%;object-fit:contain;padding:6px">`;
+    } else {
+        preview.style.display = 'none';
+        preview.innerHTML = '';
+    }
 
     try { tagsActuales = JSON.parse(p.etiquetas || '[]'); } catch (e) { tagsActuales = []; }
     if (!Array.isArray(tagsActuales)) tagsActuales = [];
@@ -772,8 +776,9 @@ function previewImagen(input) {
     if (!input.files[0]) return;
     const reader = new FileReader();
     reader.onload = e => {
-        document.getElementById('modal-img-preview').innerHTML =
-            `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain;padding:6px">`;
+        const preview = document.getElementById('modal-img-preview');
+        preview.style.display = 'flex';
+        preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain;padding:6px">`;
     };
     reader.readAsDataURL(input.files[0]);
 }
