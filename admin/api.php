@@ -216,14 +216,16 @@ try {
             }
 
             // Si el producto todavía no tiene imagen principal, la primera imagen
-            // adicional recién subida también se usa como principal, para que
-            // aparezca en los listados sin tener que usar el campo "Imagen" aparte.
+            // adicional recién subida se MUEVE a principal (no se copia) para que
+            // aparezca en los listados sin quedar duplicada también como adicional.
             if ($primeraExtraSubida !== null) {
                 $tieneImagen = $pdo->prepare('SELECT imagen_path FROM productos WHERE id = ? AND tienda_id = ?');
                 $tieneImagen->execute([$productoId, TIENDA_ID]);
                 if (empty($tieneImagen->fetchColumn())) {
                     $pdo->prepare('UPDATE productos SET imagen_path = ? WHERE id = ? AND tienda_id = ?')
                         ->execute([$primeraExtraSubida, $productoId, TIENDA_ID]);
+                    $pdo->prepare('DELETE FROM producto_imagenes WHERE producto_id = ? AND imagen_path = ?')
+                        ->execute([$productoId, $primeraExtraSubida]);
                 }
             }
 
