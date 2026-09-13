@@ -1,7 +1,8 @@
 <?php
-$pageTitle  = 'Crear Cuenta';
-$currentPage = 'registro';
-require_once __DIR__ . '/../includes/header.php';
+// Todo lo que pueda terminar en header('Location: ...') debe resolverse
+// ANTES de includes/header.php: ese archivo ya imprime HTML, así que un
+// redirect después fallaría en silencio (headers already sent).
+require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../includes/auth_cliente.php';
 require_once __DIR__ . '/../config/database.php';
 
@@ -40,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare('
                 INSERT INTO clientes (nombre, apellidos, dni, email, celular, direccion, distrito, ciudad, password_hash)
                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-            ')->execute([$nombre, $apellidos, $dni, $email, $celular, $direccion, $distrito, $ciudad, password_hash($pass)]);
+            ')->execute([$nombre, $apellidos, $dni, $email, $celular, $direccion, $distrito, $ciudad, password_hash($pass, PASSWORD_DEFAULT)]);
 
             $c = $pdo->prepare('SELECT * FROM clientes WHERE email = ?');
             $c->execute([$email]);
@@ -50,6 +51,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$pageTitle  = 'Crear Cuenta';
+$currentPage = 'registro';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="page-wrapper">

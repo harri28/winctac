@@ -1,11 +1,16 @@
 <?php
-$pageTitle  = 'Mis Puntos';
-$currentPage = 'puntos';
-require_once __DIR__ . '/../includes/header.php';
+// La auth debe resolverse ANTES de includes/header.php: ese archivo ya
+// imprime HTML, así que un header('Location: ...') después fallaría en
+// silencio (headers already sent) en vez de redirigir a login.
+require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../includes/auth_cliente.php';
 require_once __DIR__ . '/../config/database.php';
 
 requireClienteAuth();
+
+$pageTitle  = 'Mis Puntos';
+$currentPage = 'puntos';
+require_once __DIR__ . '/../includes/header.php';
 
 $pdo = getDB();
 

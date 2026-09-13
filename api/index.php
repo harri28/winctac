@@ -151,7 +151,7 @@ try {
                 $pdo->prepare('
                     INSERT INTO clientes (nombre, apellidos, dni, email, celular, password_hash)
                     VALUES (?, ?, ?, ?, ?, ?)
-                ')->execute([$cNombre, $cApells, $cDni, $email, $cCelular, password_hash($password)]);
+                ')->execute([$cNombre, $cApells, $cDni, $email, $cCelular, password_hash($password, PASSWORD_DEFAULT)]);
                 $c = $pdo->prepare('SELECT * FROM clientes WHERE email = ?');
                 $c->execute([$email]);
                 $cData = $c->fetch();

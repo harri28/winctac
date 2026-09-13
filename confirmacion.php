@@ -1,7 +1,8 @@
 <?php
-$pageTitle  = 'Pedido Confirmado';
-$currentPage = 'confirmacion';
-require_once __DIR__ . '/includes/header.php';
+// Todo lo que pueda terminar en header('Location: ...') debe resolverse
+// ANTES de includes/header.php: ese archivo ya imprime HTML, así que un
+// redirect después podría fallar en silencio (headers already sent).
+require_once __DIR__ . '/config/app.php';
 require_once __DIR__ . '/includes/auth_cliente.php';
 require_once __DIR__ . '/config/database.php';
 
@@ -50,6 +51,10 @@ $waMsg = str_replace('{total}', number_format($pedido['total'], 2), $waMsg);
 $waLink = $waNum ? 'https://wa.me/51' . $waNum . '?text=' . urlencode($waMsg) : '';
 
 $metodo = $pedido['metodo_pago'];
+
+$pageTitle  = 'Pedido Confirmado';
+$currentPage = 'confirmacion';
+require_once __DIR__ . '/includes/header.php';
 ?>
 
 <div class="page-wrapper">

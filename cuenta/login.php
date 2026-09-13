@@ -1,7 +1,8 @@
 <?php
-$pageTitle  = 'Iniciar Sesión';
-$currentPage = 'login';
-require_once __DIR__ . '/../includes/header.php';
+// Todo lo que pueda terminar en header('Location: ...') debe resolverse
+// ANTES de includes/header.php: ese archivo ya imprime HTML, así que un
+// redirect después fallaría en silencio (headers already sent).
+require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../includes/auth_cliente.php';
 require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/rate_limit.php';
@@ -38,6 +39,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Por favor ingresa tu correo y contraseña.';
     }
 }
+
+$pageTitle  = 'Iniciar Sesión';
+$currentPage = 'login';
+require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <div class="page-wrapper">
