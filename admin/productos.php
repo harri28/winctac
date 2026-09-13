@@ -183,7 +183,7 @@ $totalInactivos = count($productos) - $totalActivos;
                             <td id="planilla-item" class="planilla-readonly" style="width:40px">—</td>
                             <td><input type="text" id="f-codigo" class="planilla-input" style="width:80px" placeholder="Opcional"></td>
                             <td><input type="text" id="f-nombre" class="planilla-input" style="width:200px;text-align:left" placeholder="Ej: Jabón Antibacterial"></td>
-                            <td><input type="text" id="f-marca" class="planilla-input" style="width:90px" placeholder="Opcional"></td>
+                            <td><input type="text" id="f-marca" class="planilla-input" style="width:90px"></td>
                             <td><input type="text" id="f-um" class="planilla-input" style="width:55px" placeholder="UND"></td>
                             <td><input type="number" id="f-costo-anterior" class="planilla-input" style="width:75px" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()"></td>
                             <td><input type="number" id="f-costo-actual" class="planilla-input" style="width:75px" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()"></td>
