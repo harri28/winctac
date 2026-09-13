@@ -125,6 +125,8 @@ CREATE TABLE IF NOT EXISTS productos (
     tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
     nombre VARCHAR(200) NOT NULL,
     codigo VARCHAR(50) DEFAULT '',
+    -- Descripción TÉCNICA del producto (distinta del "nombre", que es la
+    -- descripción/título comercial que se ve en catálogo y listas de precios).
     descripcion TEXT DEFAULT '',
     precio DECIMAL(10,2) NOT NULL DEFAULT 0,
     stock INTEGER NOT NULL DEFAULT 0,
@@ -133,6 +135,14 @@ CREATE TABLE IF NOT EXISTS productos (
     activo BOOLEAN DEFAULT TRUE,
     -- Etiquetas de búsqueda (uso interno, no se muestran al cliente): array JSON de strings, ej. ["limpieza","cuidado del hogar"]
     etiquetas TEXT DEFAULT '[]',
+    -- Costeo interno (uso admin, nunca visible al público): a partir de
+    -- costo_actual + lista_porcentaje se recalcula "precio" en cada guardado.
+    marca VARCHAR(100) DEFAULT '',
+    um VARCHAR(20) DEFAULT '',
+    costo_anterior DECIMAL(10,4) NOT NULL DEFAULT 0,
+    costo_actual DECIMAL(10,4) NOT NULL DEFAULT 0,
+    minimo_porcentaje DECIMAL(6,2) NOT NULL DEFAULT 0,
+    lista_porcentaje DECIMAL(6,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );
@@ -210,6 +220,10 @@ CREATE TABLE IF NOT EXISTS config (
     -- Programa de puntos
     puntos_activo BOOLEAN DEFAULT FALSE,
     puntos_por_sol DECIMAL(10,2) DEFAULT 1.00,
+    -- Mostrar cantidades exactas de stock en la tienda pública (si está
+    -- apagado, sigue bloqueando la compra cuando stock=0, solo se ocultan
+    -- los números exactos de "X disponibles"/"Últimas X unidades")
+    mostrar_stock BOOLEAN DEFAULT TRUE,
     updated_at TIMESTAMP DEFAULT NOW()
 );
 

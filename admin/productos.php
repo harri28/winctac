@@ -142,24 +142,17 @@ $totalInactivos = count($productos) - $totalActivos;
 </div>
 
 <!-- Modal crear/editar -->
-<div id="modal-producto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;justify-content:center;overflow-y:auto;padding:20px">
-    <div style="background:#fff;border-radius:var(--radius-lg);padding:28px;max-width:460px;width:92%;box-shadow:var(--shadow-lg)">
+<div id="modal-producto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;align-items:safe center;justify-content:center;overflow-y:auto;padding:20px">
+    <div style="background:#fff;border-radius:var(--radius-lg);padding:28px;max-width:640px;width:92%;box-shadow:var(--shadow-lg);margin:auto 0">
         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:18px">
             <h3 id="modal-titulo" style="font-weight:700;font-size:.95rem"><i class="fas fa-box"></i> Nuevo producto</h3>
             <button onclick="cerrarModal()" style="background:none;border:none;cursor:pointer;font-size:1.3rem;color:var(--text-muted)">×</button>
         </div>
 
-        <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
-            <div id="modal-img-preview" style="width:100px;height:100px;border-radius:10px;background:var(--surface-3);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
+        <div id="img-gallery" style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-bottom:6px">
+            <div id="modal-img-preview" style="width:clamp(64px,18vw,100px);height:clamp(64px,18vw,100px);border-radius:10px;background:var(--surface-3);overflow:hidden;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
                 <i class="fas fa-image fa-2x"></i>
             </div>
-            <?php for ($i = 1; $i <= 4; $i++): ?>
-            <div class="img-extra-slot" id="img-extra-slot-<?= $i ?>" onclick="clickExtraSlot(<?= $i ?>)"
-                 style="width:100px;height:100px;border-radius:10px;background:var(--surface-3);border:2px dashed var(--border);position:relative;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
-                <i class="fas fa-plus"></i>
-                <input type="file" class="img-extra-input" data-slot="<?= $i ?>" accept="image/*" style="display:none" onchange="onExtraFileChange(<?= $i ?>, this)">
-            </div>
-            <?php endfor; ?>
         </div>
         <div class="form-hint" style="text-align:center;margin-bottom:18px">Hasta 5 imágenes en total (la principal + 4 adicionales)</div>
 
@@ -172,6 +165,17 @@ $totalInactivos = count($productos) - $totalActivos;
             <div class="form-group">
                 <label class="form-label">Código / SKU</label>
                 <input type="text" id="f-codigo" class="form-control" placeholder="Opcional">
+            </div>
+            <div class="form-group">
+                <label class="form-label">Marca</label>
+                <input type="text" id="f-marca" class="form-control" placeholder="Opcional">
+            </div>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <div class="form-group">
+                <label class="form-label">Unidad de medida</label>
+                <input type="text" id="f-um" class="form-control" placeholder="Ej: UND, KG, CAJA">
             </div>
             <div class="form-group">
                 <label class="form-label" style="display:flex;justify-content:space-between;align-items:center">
@@ -199,19 +203,47 @@ $totalInactivos = count($productos) - $totalActivos;
             </div>
         </div>
 
-        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-            <div class="form-group">
-                <label class="form-label">Precio (S/) <span style="color:var(--danger)">*</span></label>
-                <input type="number" id="f-precio" class="form-control" step="0.01" min="0" placeholder="0.00">
+        <div class="form-group">
+            <label class="form-label">Stock <span style="color:var(--danger)">*</span></label>
+            <input type="number" id="f-stock" class="form-control" step="1" min="0" placeholder="0" style="max-width:160px">
+        </div>
+
+        <div class="form-group" style="background:var(--surface-3);border-radius:var(--radius);padding:14px">
+            <label class="form-label">Costeo y precio de venta</label>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+                <div>
+                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">Costo anterior (S/)</label>
+                    <input type="number" id="f-costo-anterior" class="form-control" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">Costo actual (S/)</label>
+                    <input type="number" id="f-costo-actual" class="form-control" step="0.0001" min="0" placeholder="0.0000" oninput="recalcularPrecio()">
+                </div>
             </div>
-            <div class="form-group">
-                <label class="form-label">Stock <span style="color:var(--danger)">*</span></label>
-                <input type="number" id="f-stock" class="form-control" step="1" min="0" placeholder="0">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:10px">
+                <div>
+                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">% Mínimo</label>
+                    <input type="number" id="f-minimo-pct" class="form-control" step="0.01" placeholder="0.00" oninput="recalcularPrecio()">
+                </div>
+                <div>
+                    <label class="form-label" style="font-size:.78rem;margin-bottom:4px">% Lista</label>
+                    <input type="number" id="f-lista-pct" class="form-control" step="0.01" placeholder="0.00" oninput="recalcularPrecio()">
+                </div>
+            </div>
+
+            <div style="margin-top:12px;padding:12px;background:#fff;border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.82rem;line-height:1.9">
+                Resultado (variación de costo): <strong id="r-resultado">S/ 0.00</strong><br>
+                Precio mínimo: <strong id="r-precio-min">S/ 0.00</strong> · Utilidad: <strong id="r-utilidad-min">S/ 0.00</strong><br>
+                <span style="font-size:.95rem">Precio de venta: <strong id="r-precio-lista" style="color:var(--primary)">S/ 0.00</strong></span> · Utilidad: <strong id="r-utilidad-lista">S/ 0.00</strong>
+            </div>
+            <div class="form-hint">
+                El precio de venta se calcula solo (Costo actual × (1 + % Lista)). Si dejas "Costo actual" en 0, se conserva el precio que ya tenía el producto.
             </div>
         </div>
 
         <div class="form-group">
-            <label class="form-label">Descripción</label>
+            <label class="form-label">Descripción técnica <span style="color:var(--text-muted);font-size:.75rem;font-weight:400">(se muestra al cliente en la página del producto)</span></label>
             <textarea id="f-descripcion" class="form-control" rows="2" placeholder="Opcional"></textarea>
         </div>
 
@@ -290,28 +322,68 @@ let modalProductoId = 0;
 let modalImagenActual = '';
 let tagsActuales = [];
 let todasLasEtiquetas = [];
+let precioActualProducto = 0; // precio ya guardado; se conserva si "costo actual" queda en 0
 
-// ── IMÁGENES ADICIONALES (hasta 4 slots, + la principal = 5 en total) ──
-// Cada slot: null (vacío) | {existingId, path} (ya guardada) | {file} (recién elegida, sin subir)
-let extraSlots = {1: null, 2: null, 3: null, 4: null};
+// ── COSTEO: recalcula Resultado/Precio mínimo/Precio de venta en vivo ──
+function recalcularPrecio() {
+    const costoAnt = parseFloat(document.getElementById('f-costo-anterior').value) || 0;
+    const costoAct = parseFloat(document.getElementById('f-costo-actual').value) || 0;
+    const minPct   = parseFloat(document.getElementById('f-minimo-pct').value) || 0;
+    const listaPct = parseFloat(document.getElementById('f-lista-pct').value) || 0;
+
+    const resultado     = costoAnt || costoAct ? costoAct - costoAnt : 0;
+    const precioMin      = costoAct > 0 ? costoAct * (1 + minPct / 100) : 0;
+    const utilidadMin    = costoAct > 0 ? precioMin - costoAct : 0;
+    const precioLista    = costoAct > 0 ? costoAct * (1 + listaPct / 100) : precioActualProducto;
+    const utilidadLista  = costoAct > 0 ? precioLista - costoAct : 0;
+
+    document.getElementById('r-resultado').textContent    = 'S/ ' + resultado.toFixed(2);
+    document.getElementById('r-precio-min').textContent   = 'S/ ' + precioMin.toFixed(2);
+    document.getElementById('r-utilidad-min').textContent = 'S/ ' + utilidadMin.toFixed(2);
+    document.getElementById('r-precio-lista').textContent = 'S/ ' + precioLista.toFixed(2);
+    document.getElementById('r-utilidad-lista').textContent = 'S/ ' + utilidadLista.toFixed(2);
+}
+
+// ── IMÁGENES ADICIONALES (hasta 4, + la principal = 5 en total) ──
+// Array compacto (sin huecos): cada elemento es {existingId, path} (ya guardada) | {file} (recién elegida, sin subir).
+// Se muestran solo los slots ocupados más UN cuadro para agregar la siguiente, hasta llegar a 4.
+const MAX_EXTRA = 4;
+let extraSlots = [];
 let eliminarImagenesIds = [];
 
 function resetExtraSlots() {
-    extraSlots = {1: null, 2: null, 3: null, 4: null};
+    extraSlots = [];
     eliminarImagenesIds = [];
-    for (let n = 1; n <= 4; n++) renderExtraSlot(n);
+    renderExtraGallery();
 }
 
-function renderExtraSlot(n) {
-    const slot  = document.getElementById('img-extra-slot-' + n);
+function extraSlotHTML(n) {
+    return `<div class="img-extra-slot" data-slot="${n}" onclick="clickExtraSlot(${n})"
+         style="width:clamp(64px,18vw,100px);height:clamp(64px,18vw,100px);border-radius:10px;background:var(--surface-3);border:2px dashed var(--border);position:relative;overflow:hidden;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-light)">
+        <i class="fas fa-plus"></i>
+        <input type="file" class="img-extra-input" data-slot="${n}" accept="image/*" style="display:none" onchange="onExtraFileChange(${n}, this)">
+    </div>`;
+}
+
+function renderExtraGallery() {
+    const gallery = document.getElementById('img-gallery');
+    gallery.querySelectorAll('.img-extra-slot').forEach(el => el.remove());
+
+    const totalSlots = extraSlots.length + (extraSlots.length < MAX_EXTRA ? 1 : 0);
+    for (let n = 1; n <= totalSlots; n++) {
+        gallery.insertAdjacentHTML('beforeend', extraSlotHTML(n));
+        renderExtraSlotContent(n);
+    }
+}
+
+function renderExtraSlotContent(n) {
+    const slot  = gallerySlotEl(n);
     const input = slot.querySelector('.img-extra-input');
-    const data  = extraSlots[n];
+    const data  = extraSlots[n - 1];
 
     let src = '';
     if (data && data.file) src = URL.createObjectURL(data.file);
     else if (data && data.path) src = window.BASE_URL + '/uploads/productos/' + data.path;
-
-    slot.querySelectorAll('.img-extra-thumb, .img-extra-remove').forEach(el => el.remove());
 
     if (src) {
         slot.style.border = '1.5px solid var(--border)';
@@ -327,10 +399,11 @@ function renderExtraSlot(n) {
         btnX.onclick = (e) => removeExtraSlot(n, e);
         slot.appendChild(btnX);
         slot.querySelector('.fa-plus').style.display = 'none';
-    } else {
-        slot.style.border = '2px dashed var(--border)';
-        slot.querySelector('.fa-plus').style.display = '';
     }
+}
+
+function gallerySlotEl(n) {
+    return document.querySelector(`.img-extra-slot[data-slot="${n}"]`);
 }
 
 function clickExtraSlot(n) {
@@ -340,23 +413,23 @@ function clickExtraSlot(n) {
 function onExtraFileChange(n, input) {
     const file = input.files[0];
     if (!file) return;
+    const idx = n - 1;
     // Si ya había una imagen guardada en este slot, se reemplaza: se marca para borrar.
-    if (extraSlots[n] && extraSlots[n].existingId) {
-        eliminarImagenesIds.push(extraSlots[n].existingId);
+    if (extraSlots[idx] && extraSlots[idx].existingId) {
+        eliminarImagenesIds.push(extraSlots[idx].existingId);
     }
-    extraSlots[n] = {file};
-    renderExtraSlot(n);
+    extraSlots[idx] = {file};
+    renderExtraGallery();
 }
 
 function removeExtraSlot(n, event) {
     event.stopPropagation();
-    if (extraSlots[n] && extraSlots[n].existingId) {
-        eliminarImagenesIds.push(extraSlots[n].existingId);
+    const idx = n - 1;
+    if (extraSlots[idx] && extraSlots[idx].existingId) {
+        eliminarImagenesIds.push(extraSlots[idx].existingId);
     }
-    extraSlots[n] = null;
-    const slot = document.getElementById('img-extra-slot-' + n);
-    slot.querySelector('.img-extra-input').value = '';
-    renderExtraSlot(n);
+    extraSlots.splice(idx, 1);
+    renderExtraGallery();
 }
 
 async function cargarImagenesExtra(productoId) {
@@ -364,10 +437,8 @@ async function cargarImagenesExtra(productoId) {
         const res  = await fetch(window.BASE_URL + '/admin/api.php?action=imagenes_producto&producto_id=' + productoId);
         const data = await res.json();
         if (!data.success) return;
-        data.data.slice(0, 4).forEach((img, i) => {
-            extraSlots[i + 1] = {existingId: img.id, path: img.imagen_path};
-            renderExtraSlot(i + 1);
-        });
+        extraSlots = data.data.slice(0, MAX_EXTRA).map(img => ({existingId: img.id, path: img.imagen_path}));
+        renderExtraGallery();
     } catch (e) {}
 }
 
@@ -480,8 +551,15 @@ function abrirNuevo() {
     document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-box"></i> Nuevo producto';
     document.getElementById('f-nombre').value = '';
     document.getElementById('f-codigo').value = '';
+    document.getElementById('f-marca').value = '';
+    document.getElementById('f-um').value = '';
     document.getElementById('f-categoria').value = '';
-    document.getElementById('f-precio').value = '';
+    document.getElementById('f-costo-anterior').value = '';
+    document.getElementById('f-costo-actual').value = '';
+    document.getElementById('f-minimo-pct').value = '';
+    document.getElementById('f-lista-pct').value = '';
+    precioActualProducto = 0;
+    recalcularPrecio();
     document.getElementById('f-stock').value = '';
     document.getElementById('f-descripcion').value = '';
     document.getElementById('f-imagen').value = '';
@@ -504,8 +582,15 @@ function abrirEditar(p) {
     document.getElementById('modal-titulo').innerHTML = '<i class="fas fa-edit"></i> Editar producto';
     document.getElementById('f-nombre').value = p.nombre || '';
     document.getElementById('f-codigo').value = p.codigo || '';
+    document.getElementById('f-marca').value = p.marca || '';
+    document.getElementById('f-um').value = p.um || '';
     document.getElementById('f-categoria').value = p.categoria_id || '';
-    document.getElementById('f-precio').value = p.precio || '';
+    document.getElementById('f-costo-anterior').value = parseFloat(p.costo_anterior || 0) || '';
+    document.getElementById('f-costo-actual').value = parseFloat(p.costo_actual || 0) || '';
+    document.getElementById('f-minimo-pct').value = parseFloat(p.minimo_porcentaje || 0) || '';
+    document.getElementById('f-lista-pct').value = parseFloat(p.lista_porcentaje || 0) || '';
+    precioActualProducto = parseFloat(p.precio || 0);
+    recalcularPrecio();
     document.getElementById('f-stock').value = p.stock || '';
     document.getElementById('f-descripcion').value = p.descripcion || '';
     document.getElementById('f-imagen').value = '';
@@ -656,11 +741,9 @@ function previewImagen(input) {
 
 async function guardarProducto() {
     const nombre = document.getElementById('f-nombre').value.trim();
-    const precio = document.getElementById('f-precio').value;
     const stock  = document.getElementById('f-stock').value;
 
     if (!nombre) { mostrarMsg('El nombre es requerido.', false); return; }
-    if (precio === '' || parseFloat(precio) < 0) { mostrarMsg('Ingresa un precio válido.', false); return; }
     if (stock === '' || parseInt(stock) < 0) { mostrarMsg('Ingresa un stock válido.', false); return; }
 
     const btn = document.getElementById('btn-guardar');
@@ -670,8 +753,13 @@ async function guardarProducto() {
     form.append('producto_id', modalProductoId);
     form.append('nombre', nombre);
     form.append('codigo', document.getElementById('f-codigo').value.trim());
+    form.append('marca', document.getElementById('f-marca').value.trim());
+    form.append('um', document.getElementById('f-um').value.trim());
     form.append('categoria_id', document.getElementById('f-categoria').value);
-    form.append('precio', precio);
+    form.append('costo_anterior', document.getElementById('f-costo-anterior').value || 0);
+    form.append('costo_actual', document.getElementById('f-costo-actual').value || 0);
+    form.append('minimo_porcentaje', document.getElementById('f-minimo-pct').value || 0);
+    form.append('lista_porcentaje', document.getElementById('f-lista-pct').value || 0);
     form.append('stock', stock);
     form.append('descripcion', document.getElementById('f-descripcion').value.trim());
     form.append('etiquetas', JSON.stringify(tagsActuales));
@@ -685,9 +773,9 @@ async function guardarProducto() {
     const imgFile = document.getElementById('f-imagen').files[0];
     if (imgFile) form.append('imagen', imgFile);
 
-    for (let n = 1; n <= 4; n++) {
-        if (extraSlots[n] && extraSlots[n].file) form.append('imagen_extra_' + n, extraSlots[n].file);
-    }
+    extraSlots.forEach((data, idx) => {
+        if (data && data.file) form.append('imagen_extra_' + (idx + 1), data.file);
+    });
     form.append('eliminar_imagenes', JSON.stringify(eliminarImagenesIds));
 
     const res  = await fetch(window.BASE_URL + '/admin/api.php?action=guardar_producto', { method: 'POST', body: form });

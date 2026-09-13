@@ -241,6 +241,17 @@ $migraciones = [
         estado VARCHAR(20) NOT NULL DEFAULT 'nueva',
         created_at TIMESTAMP DEFAULT NOW()
     )",
+
+    // ── Costeo interno de producto (Marca/UM/Costo/% Mínimo/% Lista) ──
+    'productos_marca'             => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS marca VARCHAR(100) DEFAULT ''",
+    'productos_um'                => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS um VARCHAR(20) DEFAULT ''",
+    'productos_costo_anterior'    => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS costo_anterior DECIMAL(10,4) NOT NULL DEFAULT 0",
+    'productos_costo_actual'      => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS costo_actual DECIMAL(10,4) NOT NULL DEFAULT 0",
+    'productos_minimo_porcentaje' => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS minimo_porcentaje DECIMAL(6,2) NOT NULL DEFAULT 0",
+    'productos_lista_porcentaje'  => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS lista_porcentaje DECIMAL(6,2) NOT NULL DEFAULT 0",
+
+    // ── Mostrar/ocultar cantidades exactas de stock en la tienda pública ──
+    'config_mostrar_stock' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS mostrar_stock BOOLEAN DEFAULT TRUE",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

@@ -8,7 +8,6 @@ $pdo = getDB();
 $cfgStmt = $pdo->prepare('SELECT * FROM config WHERE id = ?');
 $cfgStmt->execute([TIENDA_ID]);
 $cfg = $cfgStmt->fetch();
-$empresas = $pdo->query('SELECT * FROM empresas_envio ORDER BY id')->fetchAll();
 $success = '';
 $error   = '';
 
@@ -21,6 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     $sets = implode(', ', array_map(fn($f) => "$f = :$f", $fields));
     $params = [];
     foreach ($fields as $f) { $params[$f] = trim($_POST[$f] ?? ''); }
+
+    $sets .= ', mostrar_stock = :mostrar_stock';
+    $params['mostrar_stock'] = isset($_POST['mostrar_stock']) ? 't' : 'f';
 
     // Subir QR de billetera digital
     if (!empty($_FILES['billetera_qr']['tmp_name'])) {
@@ -71,18 +73,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_envio'])) {
         $pdo->prepare('INSERT INTO empresas_envio (nombre, descripcion, precio) VALUES (?,?,?)')
             ->execute([$nombre, $desc, $precio]);
     }
-    header('Location: ' . BASE_URL . '/admin/config.php?ok=envio');
-    exit;
+    $success = 'Empresa de envío guardada.';
 }
 
 // Eliminar empresa de envío
 if ($_GET['del_envio'] ?? '') {
     $pdo->prepare('DELETE FROM empresas_envio WHERE id = ?')->execute([intval($_GET['del_envio'])]);
-    header('Location: ' . BASE_URL . '/admin/config.php');
-    exit;
+    $success = 'Empresa de envío eliminada.';
 }
 
-if (isset($_GET['ok'])) $success = 'Guardado correctamente.';
+// admin/includes/header.php ya imprimió el layout de la página antes de este
+// punto, así que ningún handler de arriba puede usar header('Location: ...')
+// (fallaría en silencio) — en vez de redirigir, se recarga aquí y se
+// re-renderiza la misma página con los datos frescos.
+$empresas = $pdo->query('SELECT * FROM empresas_envio ORDER BY id')->fetchAll();
 ?>
 
 <div class="admin-topbar">
@@ -118,11 +122,16 @@ if (isset($_GET['ok'])) $success = 'Guardado correctamente.';
             <input type="file" name="logo" class="form-control" accept="image/*">
             <div class="form-hint">Se usa en el login, la tienda y el panel de administración, y también como ícono de la pestaña del navegador (favicon)</div>
         </div>
-        <div class="form-group" style="margin-bottom:0">
+        <div class="form-group">
             <label class="form-label">Color de marca</label>
             <input type="color" name="color_primary" value="<?= htmlspecialchars($cfg['color_primary'] ?? '#dc2626') ?>" style="width:70px;height:38px;padding:2px;cursor:pointer">
             <div class="form-hint">Se aplica en toda la tienda, el login y el panel de administración</div>
         </div>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;margin-bottom:0">
+            <input type="checkbox" name="mostrar_stock" value="1" <?= !empty($cfg['mostrar_stock']) ? 'checked' : '' ?>>
+            Mostrar cantidad exacta de stock al público
+        </label>
+        <div class="form-hint">Si lo apagas, la tienda solo indica "Sin stock" o "Disponible", sin mostrar el número exacto de unidades — el producto se sigue bloqueando para compra si el stock es 0.</div>
     </div>
 
     <!-- Contacto (footer: botón "Contáctanos") -->
