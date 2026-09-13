@@ -58,6 +58,7 @@ $__rte = function (string $field, string $valor, int $minRows) {
         <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyLeft" title="Alinear a la izquierda"><i class="fas fa-align-left"></i></button>
         <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyCenter" title="Centrar"><i class="fas fa-align-center"></i></button>
         <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyRight" title="Alinear a la derecha"><i class="fas fa-align-right"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyFull" title="Justificar texto"><i class="fas fa-align-justify"></i></button>
     </div>
     <div id="rte-<?= $field ?>" class="form-control rte-editable" style="min-height:<?= $minHeight ?>px" contenteditable="true"><?= renderRichText($valor) ?></div>
     <input type="hidden" name="portal_<?= $field ?>" id="rte-<?= $field ?>-input">
