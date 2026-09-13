@@ -147,6 +147,7 @@ function irAPagina(n) {
 function cardHTML(p) {
     const stock = parseInt(p.stock || 0);
     const stockLabel = stock <= 0 ? '<span class="product-stock out">Sin stock</span>'
+        : !window.MOSTRAR_STOCK ? '<span class="product-stock">Disponible</span>'
         : stock <= 5 ? `<span class="product-stock low">Últimas ${stock} unidades</span>`
         : `<span class="product-stock">${stock} disponibles</span>`;
 

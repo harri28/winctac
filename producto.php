@@ -125,6 +125,8 @@ require_once __DIR__ . '/includes/header.php';
 
             <?php if ($stock <= 0): ?>
             <div class="product-stock out"><i class="fas fa-times-circle"></i> Sin stock</div>
+            <?php elseif (empty($cfg['mostrar_stock'])): ?>
+            <div class="product-stock"><i class="fas fa-check-circle" style="color:var(--success)"></i> Disponible</div>
             <?php elseif ($stock <= 5): ?>
             <div class="product-stock low"><i class="fas fa-exclamation-triangle"></i> Últimas <?= $stock ?> unidades</div>
             <?php else: ?>
@@ -274,9 +276,11 @@ function cardHTML(p) {
     const stock = parseInt(p.stock || 0);
     const stockLabel = stock <= 0
         ? '<span class="product-stock out">Sin stock</span>'
-        : stock <= 5
-            ? `<span class="product-stock low">Últimas ${stock} uds.</span>`
-            : `<span class="product-stock">${stock} disponibles</span>`;
+        : !window.MOSTRAR_STOCK
+            ? '<span class="product-stock">Disponible</span>'
+            : stock <= 5
+                ? `<span class="product-stock low">Últimas ${stock} uds.</span>`
+                : `<span class="product-stock">${stock} disponibles</span>`;
     const imgHTML = p.imagen
         ? `<img class="product-img" src="${p.imagen}" alt="${p.nombre}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\'product-img-placeholder\'><i class=\'fas fa-box\'></i></div>'">`
         : `<div class="product-img-placeholder"><i class="fas fa-box"></i></div>`;

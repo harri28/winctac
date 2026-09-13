@@ -27,7 +27,10 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
     <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=37">
     <?= brandColorStyleTag($cfg) ?>
-    <script>window.BASE_URL = "<?= BASE_URL ?>";</script>
+    <script>
+        window.BASE_URL = "<?= BASE_URL ?>";
+        window.MOSTRAR_STOCK = <?= !empty($cfg['mostrar_stock']) ? 'true' : 'false' ?>;
+    </script>
     <?php if (!empty($ogData)): ?>
     <meta name="description" content="<?= htmlspecialchars($ogData['description'] ?? '') ?>">
     <meta property="og:title"       content="<?= htmlspecialchars($ogData['title'] ?? $shopName) ?>">
