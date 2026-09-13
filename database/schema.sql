@@ -141,8 +141,11 @@ CREATE TABLE IF NOT EXISTS productos (
     um VARCHAR(20) DEFAULT '',
     costo_anterior DECIMAL(10,4) NOT NULL DEFAULT 0,
     costo_actual DECIMAL(10,4) NOT NULL DEFAULT 0,
-    minimo_porcentaje DECIMAL(6,2) NOT NULL DEFAULT 0,
-    lista_porcentaje DECIMAL(6,2) NOT NULL DEFAULT 0,
+    -- DECIMAL(12,2): con costo casi cero, el % de margen puede dispararse a
+    -- millones (ej. costo 0.01 y precio 1.5 = 14900%) — matemáticamente
+    -- correcto aunque poco útil para mostrar, pero no debe romper el guardado.
+    minimo_porcentaje DECIMAL(12,2) NOT NULL DEFAULT 0,
+    lista_porcentaje DECIMAL(12,2) NOT NULL DEFAULT 0,
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

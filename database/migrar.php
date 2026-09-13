@@ -252,6 +252,10 @@ $migraciones = [
 
     // ── Mostrar/ocultar cantidades exactas de stock en la tienda pública ──
     'config_mostrar_stock' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS mostrar_stock BOOLEAN DEFAULT TRUE",
+
+    // ── Ampliar % de costeo: con costo casi cero el margen puede dispararse a millones ──
+    'productos_minimo_porcentaje_widen' => "ALTER TABLE productos ALTER COLUMN minimo_porcentaje TYPE DECIMAL(12,2)",
+    'productos_lista_porcentaje_widen'  => "ALTER TABLE productos ALTER COLUMN lista_porcentaje TYPE DECIMAL(12,2)",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

@@ -5,29 +5,75 @@ require_once __DIR__ . '/includes/header.php';
 
 $pdo = getDB();
 
+// ── Filtros (server-side: con miles de productos no se puede cargar todo y filtrar en JS) ──
+$fBuscar = trim($_GET['buscar'] ?? '');
+$fCat    = trim($_GET['cat'] ?? '');
+$fEstado = trim($_GET['estado'] ?? '');
+$porPagina = 20;
+$pagina    = max(1, intval($_GET['pagina'] ?? 1));
+
+$where  = ['p.tienda_id = ?'];
+$params = [TIENDA_ID];
+if ($fBuscar !== '') {
+    $where[]  = '(p.nombre ILIKE ? OR p.codigo ILIKE ?)';
+    $params[] = "%$fBuscar%";
+    $params[] = "%$fBuscar%";
+}
+if ($fCat !== '') {
+    $where[]  = 'c.nombre = ?';
+    $params[] = $fCat;
+}
+if ($fEstado === 'activo')   $where[] = 'p.activo = TRUE';
+elseif ($fEstado === 'inactivo') $where[] = 'p.activo = FALSE';
+$whereSql = implode(' AND ', $where);
+
+$totalStmt = $pdo->prepare("SELECT COUNT(*) FROM productos p LEFT JOIN categorias c ON c.id = p.categoria_id WHERE $whereSql");
+$totalStmt->execute($params);
+$totalFiltrados = (int) $totalStmt->fetchColumn();
+$totalPaginas   = max(1, (int) ceil($totalFiltrados / $porPagina));
+if ($pagina > $totalPaginas) $pagina = $totalPaginas;
+$offset = ($pagina - 1) * $porPagina;
+
 $productosStmt = $pdo->prepare("
     SELECT p.*, c.nombre AS categoria
     FROM productos p
     LEFT JOIN categorias c ON c.id = p.categoria_id
-    WHERE p.tienda_id = ?
+    WHERE $whereSql
     ORDER BY p.nombre ASC
+    LIMIT $porPagina OFFSET $offset
 ");
-$productosStmt->execute([TIENDA_ID]);
+$productosStmt->execute($params);
 $productos = $productosStmt->fetchAll();
 
 $categoriasStmt = $pdo->prepare('SELECT id, nombre FROM categorias WHERE tienda_id = ? ORDER BY nombre ASC');
 $categoriasStmt->execute([TIENDA_ID]);
 $categorias = $categoriasStmt->fetchAll();
 
-$totalActivos  = count(array_filter($productos, fn($p) => $p['activo']));
-$totalInactivos = count($productos) - $totalActivos;
+$stmtTotales = $pdo->prepare('SELECT COUNT(*) AS total, COUNT(*) FILTER (WHERE activo) AS activos FROM productos WHERE tienda_id = ?');
+$stmtTotales->execute([TIENDA_ID]);
+$totales = $stmtTotales->fetch();
+$totalGeneral   = (int) $totales['total'];
+$totalActivos   = (int) $totales['activos'];
+$totalInactivos = $totalGeneral - $totalActivos;
+
+// Construye la query string de paginación preservando los filtros activos
+function paginaUrl(int $n, string $buscar, string $cat, string $estado): string {
+    $q = ['pagina' => $n];
+    if ($buscar !== '') $q['buscar'] = $buscar;
+    if ($cat !== '')    $q['cat']    = $cat;
+    if ($estado !== '') $q['estado'] = $estado;
+    return '?' . http_build_query($q);
+}
 ?>
 
 <div class="admin-topbar">
     <div>
         <h1 class="admin-page-title"><i class="fas fa-box"></i> Productos</h1>
         <p style="color:var(--text-muted);font-size:.83rem;margin-top:2px">
-            <?= count($productos) ?> productos · <span style="color:var(--success)"><?= $totalActivos ?> activos</span> · <span style="color:var(--text-muted)"><?= $totalInactivos ?> inactivos</span>
+            <?= $totalGeneral ?> productos · <span style="color:var(--success)"><?= $totalActivos ?> activos</span> · <span style="color:var(--text-muted)"><?= $totalInactivos ?> inactivos</span>
+            <?php if ($fBuscar !== '' || $fCat !== '' || $fEstado !== ''): ?>
+            · <?= $totalFiltrados ?> coinciden con el filtro
+            <?php endif; ?>
         </p>
     </div>
     <div style="display:flex;gap:10px">
@@ -43,24 +89,25 @@ $totalInactivos = count($productos) - $totalActivos;
 </div>
 <?php endif; ?>
 
-<!-- Filtros -->
-<div style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
+<!-- Filtros (server-side, vía GET) -->
+<form method="GET" style="display:flex;gap:10px;margin-bottom:20px;flex-wrap:wrap;align-items:center">
     <div style="position:relative;flex:1;min-width:200px">
-        <input type="text" id="f-buscar" class="form-control" placeholder="Buscar producto..." oninput="filtrar()" style="padding-left:36px">
+        <input type="text" name="buscar" id="f-buscar" class="form-control" placeholder="Buscar producto o código..." value="<?= htmlspecialchars($fBuscar) ?>" style="padding-left:36px">
         <i class="fas fa-search" style="position:absolute;left:11px;top:50%;transform:translateY(-50%);color:var(--text-light);font-size:.85rem"></i>
     </div>
-    <select id="f-cat" class="form-control" style="width:180px" onchange="filtrar()">
+    <select name="cat" id="f-cat" class="form-control" style="width:180px" onchange="this.form.submit()">
         <option value="">Todas las categorías</option>
         <?php foreach ($categorias as $cat): ?>
-        <option value="<?= htmlspecialchars($cat['nombre']) ?>"><?= htmlspecialchars($cat['nombre']) ?></option>
+        <option value="<?= htmlspecialchars($cat['nombre']) ?>" <?= $fCat === $cat['nombre'] ? 'selected' : '' ?>><?= htmlspecialchars($cat['nombre']) ?></option>
         <?php endforeach; ?>
     </select>
-    <select id="f-estado" class="form-control" style="width:150px" onchange="filtrar()">
+    <select name="estado" id="f-estado" class="form-control" style="width:150px" onchange="this.form.submit()">
         <option value="">Todos</option>
-        <option value="activo">Activos</option>
-        <option value="inactivo">Inactivos</option>
+        <option value="activo" <?= $fEstado === 'activo' ? 'selected' : '' ?>>Activos</option>
+        <option value="inactivo" <?= $fEstado === 'inactivo' ? 'selected' : '' ?>>Inactivos</option>
     </select>
-</div>
+    <button type="submit" class="btn btn-secondary" style="font-size:.83rem"><i class="fas fa-filter"></i> Buscar</button>
+</form>
 
 <!-- Tabla -->
 <div class="table-wrapper">
@@ -140,6 +187,36 @@ $totalInactivos = count($productos) - $totalActivos;
         </tbody>
     </table>
 </div>
+
+<?php if ($totalPaginas > 1): ?>
+<div class="pagination">
+    <?php $hrefAnterior = $pagina > 1 ? paginaUrl($pagina - 1, $fBuscar, $fCat, $fEstado) : '#'; ?>
+    <a href="<?= $hrefAnterior ?>" class="page-btn page-nav" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none;<?= $pagina <= 1 ? 'opacity:.4;pointer-events:none' : '' ?>">
+        <i class="fas fa-chevron-left"></i>
+    </a>
+    <?php
+    $rango = 1;
+    $paginasAMostrar = [];
+    for ($i = 1; $i <= $totalPaginas; $i++) {
+        if ($i === 1 || $i === $totalPaginas || ($i >= $pagina - $rango && $i <= $pagina + $rango)) {
+            $paginasAMostrar[] = $i;
+        } elseif (end($paginasAMostrar) !== '...') {
+            $paginasAMostrar[] = '...';
+        }
+    }
+    foreach ($paginasAMostrar as $p):
+        if ($p === '...'): ?>
+        <span class="page-ellipsis">…</span>
+        <?php else: ?>
+        <a href="<?= paginaUrl($p, $fBuscar, $fCat, $fEstado) ?>" class="page-btn <?= $p === $pagina ? 'active' : '' ?>" style="display:inline-flex;align-items:center;justify-content:center;text-decoration:none"><?= $p ?></a>
+        <?php endif;
+    endforeach; ?>
+    <?php $hrefSiguiente = $pagina < $totalPaginas ? paginaUrl($pagina + 1, $fBuscar, $fCat, $fEstado) : '#'; ?>
+    <a href="<?= $hrefSiguiente ?>" class="page-btn page-nav" style="display:inline-flex;align-items:center;justify-content:center;gap:6px;text-decoration:none;width:auto;padding:0 14px;<?= $pagina >= $totalPaginas ? 'opacity:.4;pointer-events:none' : '' ?>">
+        Siguiente <i class="fas fa-chevron-right"></i>
+    </a>
+</div>
+<?php endif; ?>
 
 <!-- Modal crear/editar -->
 <div id="modal-producto" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:200;align-items:center;align-items:safe center;justify-content:center;overflow-y:auto;padding:20px">
@@ -462,21 +539,6 @@ fetch(window.BASE_URL + '/admin/api.php?action=etiquetas_sugeridas')
     .catch(() => {});
 
 // ── FILTROS ──
-function filtrar() {
-    const q     = document.getElementById('f-buscar').value.toLowerCase();
-    const cat   = document.getElementById('f-cat').value;
-    const est   = document.getElementById('f-estado').value;
-    document.querySelectorAll('#tabla-productos tbody tr').forEach(tr => {
-        if (!tr.dataset.nombre) return;
-        const nombre = tr.dataset.nombre || '';
-        const trCat  = tr.dataset.cat    || '';
-        const trEst  = tr.dataset.estado || '';
-        const ok = (!q || nombre.includes(q))
-                && (!cat || trCat === cat)
-                && (!est || trEst === est);
-        tr.style.display = ok ? '' : 'none';
-    });
-}
 
 // ── TOGGLE ACTIVO ──
 async function toggleActivo(id, el) {
