@@ -157,6 +157,18 @@ CREATE TABLE IF NOT EXISTS producto_ficha_tecnica (
     orden INTEGER DEFAULT 0
 );
 
+-- Trabaja con nosotros: postulaciones (nombre, DNI, teléfono, CV) por tienda
+CREATE TABLE IF NOT EXISTS postulaciones (
+    id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+    nombre VARCHAR(150) NOT NULL,
+    dni VARCHAR(15) NOT NULL,
+    telefono VARCHAR(20) NOT NULL,
+    cv_path TEXT NOT NULL,
+    estado VARCHAR(20) NOT NULL DEFAULT 'nueva',
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
 -- Configuración general (una fila por tienda; el id ES el id de la tienda)
 CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY REFERENCES tiendas(id),

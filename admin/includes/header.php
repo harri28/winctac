@@ -38,6 +38,14 @@ try {
 } catch (Exception $e) {
     $pendientesCount = 0;
 }
+
+try {
+    $postulantesNuevasStmt = getDB()->prepare("SELECT COUNT(*) FROM postulaciones WHERE estado = 'nueva' AND tienda_id = ?");
+    $postulantesNuevasStmt->execute([TIENDA_ID]);
+    $postulantesNuevasCount = (int) $postulantesNuevasStmt->fetchColumn();
+} catch (Exception $e) {
+    $postulantesNuevasCount = 0;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -51,7 +59,7 @@ try {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=34">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=37">
     <?= brandColorStyleTag($cfg) ?>
     <script>window.BASE_URL = "<?= BASE_URL ?>";</script>
     <style>
@@ -125,6 +133,7 @@ try {
                 ['page' => 'campanas',    'href' => BASE_URL . '/admin/campanas.php',    'icon' => 'fa-flag',       'label' => 'Campañas'],
                 ['page' => 'promociones', 'href' => BASE_URL . '/admin/promociones.php', 'icon' => 'fa-percentage', 'label' => 'Promociones'],
             ]],
+            ['type' => 'link', 'page' => 'postulantes', 'href' => BASE_URL . '/admin/postulantes.php', 'icon' => 'fa-briefcase', 'label' => 'Postulantes', 'badge' => $postulantesNuevasCount],
             ['type' => 'link', 'page' => 'reportes', 'href' => BASE_URL . '/admin/reportes.php', 'icon' => 'fa-chart-bar', 'label' => 'Reportes'],
             ['type' => 'group', 'icon' => 'fa-cog', 'label' => 'Configuración', 'children' => [
                 ['page' => 'config',      'href' => BASE_URL . '/admin/config.php',      'icon' => 'fa-sliders-h',    'label' => 'Configuración'],
@@ -138,8 +147,13 @@ try {
             if ($item['type'] === 'link'):
                 $active = $adminPage === $item['page'];
         ?>
-        <a href="<?= $item['href'] ?>" class="<?= $active ? 'active' : '' ?>">
+        <a href="<?= $item['href'] ?>" class="<?= $active ? 'active' : '' ?>" style="display:flex;align-items:center">
             <i class="fas <?= $item['icon'] ?>"></i> <?= $item['label'] ?>
+            <?php if (!empty($item['badge'])): ?>
+            <span style="background:#f59e0b;color:#fff;border-radius:20px;padding:1px 8px;font-size:.68rem;font-weight:700;margin-left:auto">
+                <?= $item['badge'] ?>
+            </span>
+            <?php endif; ?>
         </a>
         <?php
             else:

@@ -27,6 +27,21 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
 $direccion = trim($cfg['portal_direccion'] ?? '');
 $mapEmail  = trim($cfg['contacto_email'] ?? '');
 $mapCel    = trim($cfg['contacto_celular'] ?? '');
+
+$puntosSaldo    = 0;
+$cuponesActivos = 0;
+if (!empty($cfg['puntos_activo']) && clienteLogueado()) {
+    $saldoStmt = $pdo->prepare('SELECT puntos_saldo FROM clientes WHERE id = ?');
+    $saldoStmt->execute([clienteId()]);
+    $puntosSaldo = (int) $saldoStmt->fetchColumn();
+
+    $cuponesStmt = $pdo->prepare("
+        SELECT COUNT(*) FROM puntos_cupones
+        WHERE cliente_id = ? AND estado = 'activo' AND (expira_at IS NULL OR expira_at >= NOW())
+    ");
+    $cuponesStmt->execute([clienteId()]);
+    $cuponesActivos = (int) $cuponesStmt->fetchColumn();
+}
 ?>
 
 <section class="corp-hero" <?= $heroImg ? 'style="background-image:url(\'' . $heroImg . '\')"' : '' ?>>
@@ -42,38 +57,45 @@ $mapCel    = trim($cfg['contacto_celular'] ?? '');
 <div class="page-wrapper">
 <div class="container" style="max-width:1000px">
 
-    <div class="corp-values">
-        <div class="corp-value-card">
-            <div class="corp-value-icon"><i class="fas fa-medal"></i></div>
-            <h3>Calidad garantizada</h3>
-            <p>Seleccionamos cuidadosamente cada producto de nuestro catálogo para ofrecerte siempre lo mejor.</p>
-        </div>
-        <div class="corp-value-card">
-            <div class="corp-value-icon"><i class="fas fa-truck-fast"></i></div>
-            <h3>Entrega confiable</h3>
-            <p>Coordinamos el envío con empresas de confianza para que tu pedido llegue seguro y a tiempo.</p>
-        </div>
-        <div class="corp-value-card">
-            <div class="corp-value-icon"><i class="fas fa-shield-halved"></i></div>
-            <h3>Compra segura</h3>
-            <p>Tu información y tus pagos están protegidos en cada paso del proceso de compra.</p>
-        </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px">
-        <div class="card corp-info-card">
-            <div class="card-title"><i class="fas fa-eye"></i> Visión</div>
-            <div style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= renderRichText($cfg['portal_vision'] ?? '') ?></div>
-        </div>
+    <div class="corp-info-grid">
         <div class="card corp-info-card">
             <div class="card-title"><i class="fas fa-bullseye"></i> Misión</div>
             <div style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= renderRichText($cfg['portal_mision'] ?? '') ?></div>
+        </div>
+        <div class="card corp-info-card">
+            <div class="card-title"><i class="fas fa-eye"></i> Visión</div>
+            <div style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= renderRichText($cfg['portal_vision'] ?? '') ?></div>
         </div>
     </div>
 
     <div class="card corp-info-card" style="margin-top:20px">
         <div class="card-title"><i class="fas fa-book-open"></i> ¿Quiénes somos?</div>
         <div style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= renderRichText($cfg['portal_historia'] ?? '') ?></div>
+    </div>
+
+    <div class="corp-action-cards">
+        <div class="corp-action-card">
+            <div class="corp-action-icon"><i class="fas fa-briefcase"></i></div>
+            <h3>Trabaja con nosotros</h3>
+            <p>Estamos creciendo y buscamos gente comprometida. Postula dejando tus datos y tu CV.</p>
+            <a href="<?= BASE_URL ?>/trabaja-con-nosotros.php" class="btn btn-primary btn-lg">
+                <i class="fas fa-arrow-right"></i> Postula aquí
+            </a>
+        </div>
+        <?php if (!empty($cfg['puntos_activo'])): ?>
+        <div class="corp-action-card">
+            <div class="corp-action-icon"><i class="fas fa-ticket"></i></div>
+            <h3>Mis cupones y puntos</h3>
+            <?php if (clienteLogueado()): ?>
+            <p>Tienes <strong><?= $puntosSaldo ?> puntos</strong><?= $cuponesActivos ? ' y ' . $cuponesActivos . ' cupón(es) activo(s)' : '' ?> acumulados.</p>
+            <?php else: ?>
+            <p>Inicia sesión para ver tu saldo de puntos y tus cupones disponibles.</p>
+            <?php endif; ?>
+            <a href="<?= BASE_URL ?>/cuenta/puntos.php" class="btn btn-primary btn-lg">
+                <i class="fas fa-arrow-right"></i> Ver mis puntos
+            </a>
+        </div>
+        <?php endif; ?>
     </div>
 
     <div class="corp-stats">

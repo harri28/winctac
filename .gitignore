@@ -5,6 +5,11 @@
 /uploads/productos/*
 !/uploads/productos/.gitkeep
 
+# Postulaciones ("Trabaja con nosotros"): CVs contienen datos personales (DNI, etc.) — nunca committear
+!/uploads/postulaciones/
+/uploads/postulaciones/*
+!/uploads/postulaciones/.gitkeep
+
 # Local investigation/scratch files (Windows/XAMPP specific, not part of the app)
 apache_extra_search.txt
 apache_httpd_header.txt

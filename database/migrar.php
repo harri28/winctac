@@ -229,6 +229,18 @@ $migraciones = [
         valor VARCHAR(500) NOT NULL DEFAULT '',
         orden INTEGER DEFAULT 0
     )",
+
+    // ── Trabaja con nosotros: postulaciones (nombre, DNI, teléfono, CV) por tienda ──
+    'postulaciones_table' => "CREATE TABLE IF NOT EXISTS postulaciones (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        nombre VARCHAR(150) NOT NULL,
+        dni VARCHAR(15) NOT NULL,
+        telefono VARCHAR(20) NOT NULL,
+        cv_path TEXT NOT NULL,
+        estado VARCHAR(20) NOT NULL DEFAULT 'nueva',
+        created_at TIMESTAMP DEFAULT NOW()
+    )",
 ];
 
 foreach ($migraciones as $nombre => $sql) {
