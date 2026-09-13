@@ -303,6 +303,13 @@ $totalInactivos = count($productos) - $totalActivos;
 }
 .planilla-input:focus { outline: none; border-color: var(--primary); background: #fff; }
 .planilla-input::placeholder { color: var(--text-light); }
+/* Sin flechas de subir/bajar en los campos numéricos de la fila */
+.planilla-input[type="number"] { -moz-appearance: textfield; }
+.planilla-input::-webkit-outer-spin-button,
+.planilla-input::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+}
 .planilla-readonly { font-size: .78rem; font-weight: 600; color: var(--text-muted); }
 
 .toggle-track {
