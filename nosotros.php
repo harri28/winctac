@@ -23,6 +23,10 @@ $statCategorias = ($cfg['portal_stat_categorias'] ?? '') !== '' ? $cfg['portal_s
 $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' . $cfg['portal_hero_path']))
     ? UPLOADS_URL . '/' . htmlspecialchars($cfg['portal_hero_path'])
     : null;
+
+$direccion = trim($cfg['portal_direccion'] ?? '');
+$mapEmail  = trim($cfg['contacto_email'] ?? '');
+$mapCel    = trim($cfg['contacto_celular'] ?? '');
 ?>
 
 <section class="corp-hero" <?= $heroImg ? 'style="background-image:url(\'' . $heroImg . '\')"' : '' ?>>
@@ -40,34 +44,34 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
 
     <div class="corp-values">
         <div class="corp-value-card">
-            <i class="fas fa-medal"></i>
+            <div class="corp-value-icon"><i class="fas fa-medal"></i></div>
             <h3>Calidad garantizada</h3>
             <p>Seleccionamos cuidadosamente cada producto de nuestro catálogo para ofrecerte siempre lo mejor.</p>
         </div>
         <div class="corp-value-card">
-            <i class="fas fa-truck-fast"></i>
+            <div class="corp-value-icon"><i class="fas fa-truck-fast"></i></div>
             <h3>Entrega confiable</h3>
             <p>Coordinamos el envío con empresas de confianza para que tu pedido llegue seguro y a tiempo.</p>
         </div>
         <div class="corp-value-card">
-            <i class="fas fa-shield-halved"></i>
+            <div class="corp-value-icon"><i class="fas fa-shield-halved"></i></div>
             <h3>Compra segura</h3>
             <p>Tu información y tus pagos están protegidos en cada paso del proceso de compra.</p>
         </div>
     </div>
 
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-top:32px">
-        <div class="card">
+        <div class="card corp-info-card">
             <div class="card-title"><i class="fas fa-eye"></i> Visión</div>
             <div style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= renderRichText($cfg['portal_vision'] ?? '') ?></div>
         </div>
-        <div class="card">
+        <div class="card corp-info-card">
             <div class="card-title"><i class="fas fa-bullseye"></i> Misión</div>
             <div style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= renderRichText($cfg['portal_mision'] ?? '') ?></div>
         </div>
     </div>
 
-    <div class="card" style="margin-top:20px">
+    <div class="card corp-info-card" style="margin-top:20px">
         <div class="card-title"><i class="fas fa-book-open"></i> ¿Quiénes somos?</div>
         <div style="font-size:.9rem;color:var(--text-muted);line-height:1.7"><?= renderRichText($cfg['portal_historia'] ?? '') ?></div>
     </div>
@@ -83,10 +87,32 @@ $heroImg = (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' .
         </div>
     </div>
 
+    <?php if ($direccion): ?>
+    <div class="corp-map-section">
+        <div class="corp-map-frame">
+            <iframe
+                src="https://www.google.com/maps?q=<?= urlencode($direccion) ?>&output=embed"
+                loading="lazy"
+                referrerpolicy="no-referrer-when-downgrade"
+                allowfullscreen></iframe>
+        </div>
+        <div class="corp-map-info">
+            <h2><i class="fas fa-location-dot"></i> Encuéntranos</h2>
+            <p class="corp-map-address"><?= htmlspecialchars($direccion) ?></p>
+            <?php if ($mapCel): ?>
+            <p><i class="fas fa-phone"></i> <?= htmlspecialchars($mapCel) ?></p>
+            <?php endif; ?>
+            <?php if ($mapEmail): ?>
+            <p><i class="fas fa-envelope"></i> <?= htmlspecialchars($mapEmail) ?></p>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="corp-cta">
         <h2>¿Listo para comprar?</h2>
         <p>Explora nuestro catálogo y encuentra lo que necesitas.</p>
-        <a href="<?= BASE_URL ?>/" class="btn btn-primary btn-lg">
+        <a href="<?= BASE_URL ?>/" class="btn btn-lg corp-cta-btn">
             <i class="fas fa-arrow-right"></i> Ir al catálogo
         </a>
     </div>

@@ -25,7 +25,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=32">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=34">
     <?= brandColorStyleTag($cfg) ?>
     <script>window.BASE_URL = "<?= BASE_URL ?>";</script>
     <?php if (!empty($ogData)): ?>
@@ -85,7 +85,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
             <?php if (clienteLogueado()): ?>
                 <a href="<?= BASE_URL ?>/cuenta/mis-pedidos.php" class="user-btn">
                     <i class="fas fa-user"></i>
-                    <?= htmlspecialchars(clienteNombre()) ?>
+                    <span class="user-btn-label"><?= htmlspecialchars(clienteNombre()) ?></span>
                 </a>
                 <a href="<?= BASE_URL ?>/cuenta/puntos.php" class="user-btn" title="Mis puntos">
                     <i class="fas fa-star"></i>
@@ -95,7 +95,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
                 </a>
             <?php else: ?>
                 <a href="<?= BASE_URL ?>/cuenta/login.php" class="user-btn">
-                    <i class="fas fa-user"></i> Ingresar
+                    <i class="fas fa-user"></i> <span class="user-btn-label">Ingresar</span>
                 </a>
             <?php endif; ?>
 

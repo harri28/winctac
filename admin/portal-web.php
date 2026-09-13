@@ -23,9 +23,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_portal'])) {
     $historia      = sanitizarRichText(trim($_POST['portal_historia'] ?? ''));
     $statProductos = trim(mb_substr($_POST['portal_stat_productos'] ?? '', 0, 20));
     $statCategorias = trim(mb_substr($_POST['portal_stat_categorias'] ?? '', 0, 20));
+    $direccion     = trim(mb_substr($_POST['portal_direccion'] ?? '', 0, 300));
 
-    $pdo->prepare('UPDATE config SET portal_vision = ?, portal_mision = ?, portal_historia = ?, portal_stat_productos = ?, portal_stat_categorias = ?, updated_at = NOW() WHERE id = ?')
-        ->execute([$vision, $mision, $historia, $statProductos, $statCategorias, TIENDA_ID]);
+    $pdo->prepare('UPDATE config SET portal_vision = ?, portal_mision = ?, portal_historia = ?, portal_stat_productos = ?, portal_stat_categorias = ?, portal_direccion = ?, updated_at = NOW() WHERE id = ?')
+        ->execute([$vision, $mision, $historia, $statProductos, $statCategorias, $direccion, TIENDA_ID]);
     $success = 'Contenido actualizado correctamente.';
 
     if (!empty($_FILES['hero']['tmp_name'])) {
@@ -117,6 +118,23 @@ $__rte = function (string $field, string $valor, int $minRows) {
         <input type="text" name="portal_stat_categorias" class="form-control" maxlength="20"
                placeholder="<?= $numCategoriasReal ?>" value="<?= htmlspecialchars($cfg['portal_stat_categorias'] ?? '') ?>">
         <div class="form-hint">Automático ahora mismo: <?= $numCategoriasReal ?> categorías activas</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-title"><i class="fas fa-map-location-dot"></i> Encuéntranos</div>
+    <div class="form-hint" style="margin-bottom:16px">
+        Muestra un mapa y tu correo/celular de contacto en "Nosotros". Déjalo vacío para ocultar esta sección.
+    </div>
+
+    <div class="form-group" style="margin-bottom:0">
+        <label class="form-label">Dirección</label>
+        <input type="text" name="portal_direccion" class="form-control" maxlength="300"
+               placeholder="Jr. Ejemplo 123, Moyobamba, San Martín" value="<?= htmlspecialchars($cfg['portal_direccion'] ?? '') ?>">
+        <div class="form-hint">
+            El correo y celular que se muestran junto al mapa son los de
+            <a href="<?= BASE_URL ?>/admin/config.php">Configuración → Contacto</a>.
+        </div>
     </div>
 </div>
 </div>

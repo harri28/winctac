@@ -1033,14 +1033,28 @@ img { max-width: 100%; display: block; }
 .corp-value-card {
     background: var(--surface);
     border: 1px solid var(--border);
+    border-top: 3px solid var(--primary);
     border-radius: var(--radius-lg);
     padding: 26px 20px;
     text-align: center;
     box-shadow: var(--shadow-sm);
 }
-.corp-value-card i { font-size: 1.8rem; color: var(--primary); margin-bottom: 12px; }
+.corp-value-icon {
+    width: 56px;
+    height: 56px;
+    margin: 0 auto 14px;
+    border-radius: 50%;
+    background: var(--primary-bg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.corp-value-icon i { font-size: 1.5rem; color: var(--primary); }
 .corp-value-card h3 { font-size: 1rem; margin-bottom: 8px; }
 .corp-value-card p { font-size: .87rem; color: var(--text-muted); line-height: 1.6; }
+
+/* Tarjetas de Visión/Misión/¿Quiénes somos? con acento de marca */
+.corp-info-card { border-left: 4px solid var(--primary); }
 
 .corp-stats {
     display: flex;
@@ -1049,19 +1063,54 @@ img { max-width: 100%; display: block; }
     gap: 40px;
     margin-top: 40px;
     padding: 28px;
-    background: var(--surface-3);
+    background: linear-gradient(135deg, var(--primary-bg), var(--surface-3));
     border-radius: var(--radius-lg);
 }
 .corp-stat { text-align: center; }
 .corp-stat-num { font-size: 1.8rem; font-weight: 800; color: var(--primary); }
 .corp-stat-label { font-size: .82rem; color: var(--text-muted); margin-top: 2px; }
 
+/* ── Encuéntranos: mapa + datos de contacto ── */
+.corp-map-section {
+    display: grid;
+    grid-template-columns: 1.3fr 1fr;
+    gap: 0;
+    margin-top: 32px;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-sm);
+}
+.corp-map-frame { min-height: 260px; background: var(--surface-3); }
+.corp-map-frame iframe { width: 100%; height: 100%; min-height: 260px; border: 0; display: block; }
+.corp-map-info {
+    background: var(--surface);
+    padding: 28px 26px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    gap: 10px;
+}
+.corp-map-info h2 { font-size: 1.15rem; display: flex; align-items: center; gap: 8px; }
+.corp-map-info h2 i { color: var(--primary); }
+.corp-map-address { font-weight: 600; color: var(--text); }
+.corp-map-info p { font-size: .88rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px; }
+.corp-map-info p i { color: var(--primary); width: 16px; text-align: center; }
+@media (max-width: 700px) {
+    .corp-map-section { grid-template-columns: 1fr; }
+}
+
 .corp-cta {
     text-align: center;
     margin: 44px 0 12px;
+    padding: 40px 24px;
+    border-radius: var(--radius-lg);
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
 }
-.corp-cta h2 { font-size: 1.3rem; margin-bottom: 6px; }
-.corp-cta p { color: var(--text-muted); margin-bottom: 18px; }
+.corp-cta h2 { font-size: 1.3rem; margin-bottom: 6px; color: #fff; }
+.corp-cta p { color: rgba(255,255,255,.85); margin-bottom: 18px; }
+.corp-cta-btn { background: #fff; color: var(--primary); }
+.corp-cta-btn:hover { background: #fff; color: var(--primary-dark); }
 
 /* ── TOAST ── */
 .toast-container {
@@ -1721,4 +1770,16 @@ img { max-width: 100%; display: block; }
     .hero h1 { font-size: 1.4rem; }
     .cart-item { flex-wrap: wrap; }
     .dash-kpi-grid { grid-template-columns: 1fr 1fr; }
+
+    /* El header no cabe con nav + buscador + acciones completos en celulares
+       angostos — se oculta el nav de texto (la categoría "hamburguesa" y el
+       logo ya cubren esa navegación) y las etiquetas de texto de user-btn. */
+    .header-inner { padding: 0 10px; gap: 6px; }
+    .header-logo { margin-left: 0; gap: 6px; }
+    .header-nav { display: none; }
+    .header-search-wrap { min-width: 0; }
+    .header-actions { gap: 8px; }
+    .user-btn-label { display: none; }
+    .user-btn { padding: 7px 10px; }
+    .cart-btn { padding: 8px 10px; }
 }

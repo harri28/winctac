@@ -172,6 +172,9 @@ $migraciones = [
     'config_portal_stat_productos'  => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_stat_productos VARCHAR(20) DEFAULT ''",
     'config_portal_stat_categorias' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_stat_categorias VARCHAR(20) DEFAULT ''",
 
+    // ── Portal Web: dirección para el mapa de "Encuéntranos" (vacío = se oculta la sección) ──
+    'config_portal_direccion' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS portal_direccion VARCHAR(300) DEFAULT ''",
+
     // ── Color de marca por tienda ──
     'config_color_primary' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS color_primary VARCHAR(7) DEFAULT '#dc2626'",
 
