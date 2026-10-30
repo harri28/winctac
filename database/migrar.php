@@ -276,6 +276,24 @@ $migraciones = [
         estado VARCHAR(20) NOT NULL DEFAULT 'nuevo',
         created_at TIMESTAMP DEFAULT NOW()
     )",
+
+    // ── Integración ERP: token de la API y bitácora de sincronizaciones ──
+    'config_erp_api_token' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS erp_api_token VARCHAR(64) DEFAULT ''",
+    'erp_sincronizaciones_table' => "CREATE TABLE IF NOT EXISTS erp_sincronizaciones (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        origen VARCHAR(20) NOT NULL,
+        referencia VARCHAR(200) DEFAULT '',
+        total INTEGER NOT NULL DEFAULT 0,
+        actualizados INTEGER NOT NULL DEFAULT 0,
+        creados INTEGER NOT NULL DEFAULT 0,
+        sin_cambios INTEGER NOT NULL DEFAULT 0,
+        no_encontrados INTEGER NOT NULL DEFAULT 0,
+        errores INTEGER NOT NULL DEFAULT 0,
+        detalle TEXT DEFAULT '{}',
+        created_at TIMESTAMP DEFAULT NOW()
+    )",
+    'productos_tienda_codigo_idx' => "CREATE INDEX IF NOT EXISTS productos_tienda_codigo_idx ON productos (tienda_id, codigo)",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

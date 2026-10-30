@@ -126,6 +126,7 @@ try {
             ['type' => 'group', 'icon' => 'fa-box', 'label' => 'Productos', 'children' => [
                 ['page' => 'productos', 'href' => BASE_URL . '/admin/productos.php', 'icon' => 'fa-box-open', 'label' => 'Productos'],
                 ['page' => 'categorias', 'href' => BASE_URL . '/admin/categorias.php', 'icon' => 'fa-tags', 'label' => 'Categorías'],
+                ['page' => 'erp', 'href' => BASE_URL . '/admin/erp.php', 'icon' => 'fa-plug', 'label' => 'Integración ERP'],
             ]],
             ['type' => 'group', 'icon' => 'fa-users', 'label' => 'Clientes', 'children' => [
                 ['page' => 'clientes', 'href' => BASE_URL . '/admin/clientes.php', 'icon' => 'fa-user', 'label' => 'Clientes'],

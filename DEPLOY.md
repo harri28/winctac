@@ -209,7 +209,8 @@ apuntando a `161.132.4.82` (comprobar con `nslookup www.wintac.com.pe 8.8.8.8`).
    cd /var/www/ecomerce && git pull origin main && chown -R www-data:www-data uploads
    ```
    Correr `database/migrar.php` (paso 8: abrir temporalmente `/database/`).
-   Crea las columnas `config.red_*` y la tabla `mensajes_contacto`.
+   Crea las columnas `config.red_*` y `config.erp_api_token`, y las tablas
+   `mensajes_contacto` y `erp_sincronizaciones` (ver `docs/integracion-erp.md`).
 
 2. Certificado para los 4 dominios (con el server block actual, que todavía
    escucha en el puerto 80): agregar los dominios nuevos al `server_name`

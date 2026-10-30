@@ -6,6 +6,9 @@
 Options -MultiViews
 RewriteEngine On
 
+# Pasa la cabecera Authorization a PHP (token de api/erp.php)
+RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
 # Ruta base del directorio (/ecomerce/ en local, / en la raíz de un dominio)
 RewriteCond %{REQUEST_URI}::$1 ^(.*?/)(.*)::\2$
 RewriteRule ^(.*)$ - [E=BASE:%1]
