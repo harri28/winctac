@@ -294,6 +294,28 @@ $migraciones = [
         created_at TIMESTAMP DEFAULT NOW()
     )",
     'productos_tienda_codigo_idx' => "CREATE INDEX IF NOT EXISTS productos_tienda_codigo_idx ON productos (tienda_id, codigo)",
+
+    // ── Fidelización: compras de la tienda física / ERP que acumulan puntos ──
+    // estado: 'otorgado' (puntos acreditados), 'pendiente' (el DNI aún no está
+    // afiliado; se acredita al registrarse) o 'anulado'.
+    'compras_tienda_table' => "CREATE TABLE IF NOT EXISTS compras_tienda (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        cliente_id INTEGER REFERENCES clientes(id),
+        dni VARCHAR(15) NOT NULL,
+        comprobante VARCHAR(40) NOT NULL,
+        fecha DATE NOT NULL,
+        monto DECIMAL(10,2) NOT NULL,
+        puntos INTEGER NOT NULL DEFAULT 0,
+        estado VARCHAR(20) NOT NULL DEFAULT 'pendiente',
+        origen VARCHAR(20) NOT NULL DEFAULT 'manual',
+        admin_id INTEGER REFERENCES admin_usuarios(id),
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tienda_id, comprobante)
+    )",
+    'compras_tienda_dni_idx'          => "CREATE INDEX IF NOT EXISTS compras_tienda_dni_idx ON compras_tienda (tienda_id, dni, estado)",
+    'puntos_movimientos_compra_tienda' => "ALTER TABLE puntos_movimientos ADD COLUMN IF NOT EXISTS compra_tienda_id INTEGER REFERENCES compras_tienda(id)",
+    'clientes_dni_idx'                => "CREATE INDEX IF NOT EXISTS clientes_dni_idx ON clientes (dni)",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

@@ -9,6 +9,8 @@
 //   POST ?action=productos  → {"productos":[{codigo, nombre?, marca?, um?,
 //                              costo?, stock?, minimo_porcentaje?,
 //                              lista_porcentaje?, precio?}], "crear_nuevos": false}
+//   POST ?action=compras    → {"compras":[{dni, comprobante, fecha, monto}]}
+//                              compras de la tienda física → puntos
 //
 // Documentación completa: docs/integracion-erp.md
 // ============================================================
@@ -88,4 +90,39 @@ if ($action === 'productos') {
     ]);
 }
 
-erpApiRespuesta(400, ['success' => false, 'error' => 'Acción no válida. Usa ?action=ping o ?action=productos.']);
+// Compras de la tienda física (comprobantes del ERP) que acumulan puntos.
+// Cada compra es independiente: un comprobante repetido o con datos
+// inválidos se reporta en "resultados" sin afectar a los demás.
+if ($action === 'compras') {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        erpApiRespuesta(405, ['success' => false, 'error' => 'Usa POST.']);
+    }
+    $body = json_decode(file_get_contents('php://input'), true);
+    if (!is_array($body) || !isset($body['compras']) || !is_array($body['compras'])) {
+        erpApiRespuesta(400, ['success' => false, 'error' => 'El cuerpo debe ser JSON con un arreglo "compras".']);
+    }
+    if (count($body['compras']) > 5000) {
+        erpApiRespuesta(413, ['success' => false, 'error' => 'Máximo 5 000 compras por petición.']);
+    }
+
+    require_once __DIR__ . '/../includes/puntos.php';
+    $resultados = [];
+    $resumen = ['otorgados' => 0, 'pendientes' => 0, 'errores' => 0, 'puntos' => 0];
+    foreach ($body['compras'] as $c) {
+        $c = is_array($c) ? $c : [];
+        $r = registrarCompraTienda($pdo, $c, 'api');
+        $item = ['comprobante' => (string) ($c['comprobante'] ?? '')];
+        if (!$r['ok']) {
+            $resumen['errores']++;
+            $item += ['estado' => 'error', 'error' => $r['error']];
+        } else {
+            $resumen[$r['estado'] === 'otorgado' ? 'otorgados' : 'pendientes']++;
+            $resumen['puntos'] += $r['puntos'];
+            $item += ['estado' => $r['estado'], 'puntos' => $r['puntos']];
+        }
+        $resultados[] = $item;
+    }
+    erpApiRespuesta(200, ['success' => true, 'total' => count($resultados)] + $resumen + ['resultados' => $resultados]);
+}
+
+erpApiRespuesta(400, ['success' => false, 'error' => 'Acción no válida. Usa ?action=ping, ?action=productos o ?action=compras.']);

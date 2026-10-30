@@ -5,6 +5,7 @@
 require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../includes/auth_cliente.php';
 require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../includes/puntos.php';
 
 if (clienteLogueado()) { header('Location: ' . BASE_URL . '/'); exit; }
 
@@ -14,7 +15,7 @@ $success = false;
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $nombre    = trim($_POST['nombre'] ?? '');
     $apellidos = trim($_POST['apellidos'] ?? '');
-    $dni       = trim($_POST['dni'] ?? '');
+    $dni       = normalizarDocumento($_POST['dni'] ?? '');
     $email     = trim($_POST['email'] ?? '');
     $celular   = trim($_POST['celular'] ?? '');
     $direccion = trim($_POST['direccion'] ?? '');
@@ -23,8 +24,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass      = $_POST['password'] ?? '';
     $pass2     = $_POST['password2'] ?? '';
 
-    if (!$nombre || !$email || !$celular || !$pass) {
+    if (!$nombre || !$dni || !$email || !$celular || !$pass) {
         $error = 'Completa todos los campos requeridos.';
+    } elseif (!documentoValido($dni)) {
+        $error = 'Ingresa un DNI de 8 dígitos o un carné de extranjería válido.';
+    } elseif (!preg_match('/^\+?[\d\s]{9,15}$/', $celular)) {
+        $error = 'Ingresa un número de celular válido.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $error = 'El correo electrónico no es válido.';
     } elseif (strlen($pass) < 6) {
@@ -35,8 +40,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $pdo = getDB();
         $exists = $pdo->prepare('SELECT 1 FROM clientes WHERE email = ?');
         $exists->execute([$email]);
+        $existsDni = $pdo->prepare("SELECT 1 FROM clientes WHERE UPPER(REPLACE(dni, ' ', '')) = ?");
+        $existsDni->execute([$dni]);
         if ($exists->fetch()) {
             $error = 'Ya existe una cuenta con ese correo electrónico.';
+        } elseif ($existsDni->fetch()) {
+            $error = 'Ya existe una cuenta con ese DNI. Inicia sesión o recupera tu acceso.';
         } else {
             $pdo->prepare('
                 INSERT INTO clientes (nombre, apellidos, dni, email, celular, direccion, distrito, ciudad, password_hash)
@@ -45,8 +54,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             $c = $pdo->prepare('SELECT * FROM clientes WHERE email = ?');
             $c->execute([$email]);
-            loginCliente($c->fetch());
-            header('Location: ' . ($_GET['redirect'] ?? (BASE_URL . '/')));
+            $nuevo = $c->fetch();
+            loginCliente($nuevo);
+            // Compras previas en tienda física con este DNI: se acreditan al afiliarse
+            acreditarComprasPendientes($pdo, (int) $nuevo['id'], $dni);
+            header('Location: ' . redirectInterno($_GET['redirect'] ?? null));
             exit;
         }
     }
@@ -62,7 +74,15 @@ require_once __DIR__ . '/../includes/header.php';
         <div class="auth-wrapper" style="max-width:540px">
             <div class="auth-card">
                 <div class="auth-title"><i class="fas fa-user-plus" style="color:var(--primary)"></i> Crear Cuenta</div>
-                <div class="auth-sub">Crea tu cuenta para realizar pedidos</div>
+                <div class="auth-sub">Crea tu cuenta para realizar pedidos<?= !empty($cfg['puntos_activo']) ? ' y afiliarte al programa de puntos' : '' ?></div>
+
+                <?php if (!empty($cfg['puntos_activo'])): ?>
+                <div class="alert" style="background:var(--primary-bg);color:var(--text);font-size:.85rem;border-left:4px solid var(--primary)">
+                    <i class="fas fa-star" style="color:var(--primary)"></i>
+                    Al registrarte quedas afiliado al <strong>programa de puntos</strong>: ganas puntos en tus compras de la web
+                    y de nuestra tienda física (identificándote con tu DNI) y los canjeas por descuentos.
+                </div>
+                <?php endif; ?>
 
                 <?php if ($error): ?>
                 <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
@@ -81,8 +101,8 @@ require_once __DIR__ . '/../includes/header.php';
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
                         <div class="form-group">
-                            <label class="form-label">DNI</label>
-                            <input type="text" name="dni" class="form-control" maxlength="15" value="<?= htmlspecialchars($_POST['dni'] ?? '') ?>">
+                            <label class="form-label">DNI / CE <span style="color:var(--danger)">*</span></label>
+                            <input type="text" name="dni" class="form-control" maxlength="15" inputmode="numeric" placeholder="8 dígitos" value="<?= htmlspecialchars($_POST['dni'] ?? '') ?>" required>
                         </div>
                         <div class="form-group">
                             <label class="form-label">Celular <span style="color:var(--danger)">*</span></label>

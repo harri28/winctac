@@ -133,6 +133,7 @@ try {
             ]],
             ['type' => 'group', 'icon' => 'fa-gift', 'label' => 'Fidelización', 'children' => [
                 ['page' => 'puntos',      'href' => BASE_URL . '/admin/puntos.php',      'icon' => 'fa-star',         'label' => 'Programa de puntos'],
+                ['page' => 'compras_tienda', 'href' => BASE_URL . '/admin/compras-tienda.php', 'icon' => 'fa-cash-register', 'label' => 'Compras en tienda'],
                 ['page' => 'recompensas', 'href' => BASE_URL . '/admin/recompensas.php', 'icon' => 'fa-award',        'label' => 'Beneficios / Recompensas'],
                 ['page' => 'cupones',     'href' => BASE_URL . '/admin/cupones.php',     'icon' => 'fa-ticket',       'label' => 'Cupones'],
                 ['page' => 'niveles',     'href' => BASE_URL . '/admin/niveles.php',     'icon' => 'fa-layer-group',  'label' => 'Niveles de cliente'],

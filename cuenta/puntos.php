@@ -6,7 +6,34 @@ require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../includes/auth_cliente.php';
 require_once __DIR__ . '/../config/database.php';
 
+require_once __DIR__ . '/../includes/puntos.php';
+
 requireClienteAuth();
+
+// Clientes registrados antes de que el DNI fuera obligatorio: lo completan
+// aquí para acumular puntos también en la tienda física.
+$dniMsg = '';
+$dniError = '';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['completar_dni'])) {
+    $pdo = getDB();
+    $dni = normalizarDocumento($_POST['dni'] ?? '');
+    $actual = $pdo->prepare('SELECT dni FROM clientes WHERE id = ?');
+    $actual->execute([clienteId()]);
+    $existe = $pdo->prepare("SELECT 1 FROM clientes WHERE UPPER(REPLACE(dni, ' ', '')) = ? AND id <> ?");
+    $existe->execute([$dni, clienteId()]);
+    if (trim((string) $actual->fetchColumn()) !== '') {
+        $dniError = 'Tu cuenta ya tiene un DNI registrado.';
+    } elseif (!documentoValido($dni)) {
+        $dniError = 'Ingresa un DNI de 8 dígitos o un carné de extranjería válido.';
+    } elseif ($existe->fetchColumn()) {
+        $dniError = 'Ese DNI ya está registrado en otra cuenta.';
+    } else {
+        $pdo->prepare('UPDATE clientes SET dni = ? WHERE id = ?')->execute([$dni, clienteId()]);
+        $acreditados = acreditarComprasPendientes($pdo, clienteId(), $dni);
+        $dniMsg = 'DNI registrado. Desde ahora tus compras en tienda física también suman puntos.'
+            . ($acreditados ? " Se acreditaron $acreditados puntos de compras anteriores." : '');
+    }
+}
 
 $pageTitle  = 'Mis Puntos';
 $currentPage = 'puntos';
@@ -14,9 +41,13 @@ require_once __DIR__ . '/../includes/header.php';
 
 $pdo = getDB();
 
-$saldo = $pdo->prepare('SELECT puntos_saldo FROM clientes WHERE id = ?');
+$saldo = $pdo->prepare('SELECT puntos_saldo, dni FROM clientes WHERE id = ?');
 $saldo->execute([clienteId()]);
-$saldo = (int) $saldo->fetchColumn();
+$clienteRow = $saldo->fetch();
+$saldo = (int) $clienteRow['puntos_saldo'];
+$clienteDni = trim($clienteRow['dni'] ?? '');
+$cfgPuntos = getShopConfig();
+$porSol = rtrim(rtrim(number_format((float) ($cfgPuntos['puntos_por_sol'] ?? 1), 2), '0'), '.');
 
 $recompensas = $pdo->query('SELECT * FROM puntos_recompensas WHERE activo = TRUE ORDER BY costo_puntos ASC')->fetchAll();
 
@@ -46,7 +77,27 @@ $estadoLabel = ['activo' => 'Activo', 'usado' => 'Usado', 'vencido' => 'Vencido'
         <div class="card" style="margin-bottom:24px;text-align:center;padding:28px">
             <div style="font-size:.85rem;color:var(--text-muted);margin-bottom:6px">Tu saldo actual</div>
             <div style="font-size:2.4rem;font-weight:800;color:var(--primary)"><?= $saldo ?> <span style="font-size:1rem;font-weight:600;color:var(--text-muted)">puntos</span></div>
+            <div style="font-size:.85rem;color:var(--text-muted);margin-top:8px">
+                Ganas <strong><?= $porSol ?> punto(s) por cada S/ 1</strong> en compras confirmadas de la web y en compras de nuestra tienda física<?= $clienteDni ? ' con tu DNI ' . htmlspecialchars($clienteDni) : '' ?>.
+                Canjéalos abajo por cupones de descuento y usa el código en el checkout.
+            </div>
         </div>
+
+        <?php if ($dniMsg): ?><div class="alert alert-success"><?= htmlspecialchars($dniMsg) ?></div><?php endif; ?>
+        <?php if (!$clienteDni): ?>
+        <div class="card" style="margin-bottom:24px;border-left:4px solid var(--primary)">
+            <div class="card-title"><i class="fas fa-id-card"></i> Completa tu DNI</div>
+            <p style="font-size:.85rem;color:var(--text-muted);margin-bottom:12px">
+                Registra tu DNI para acumular puntos también cuando compres en nuestra tienda física. Si ya compraste antes identificándote con él, esos puntos se acreditarán ahora.
+            </p>
+            <?php if ($dniError): ?><div class="alert alert-error"><?= htmlspecialchars($dniError) ?></div><?php endif; ?>
+            <form method="POST" style="display:flex;gap:10px;flex-wrap:wrap">
+                <input type="hidden" name="completar_dni" value="1">
+                <input type="text" name="dni" class="form-control" maxlength="15" inputmode="numeric" placeholder="DNI (8 dígitos)" style="max-width:220px" required>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-check"></i> Guardar DNI</button>
+            </form>
+        </div>
+        <?php endif; ?>
 
         <h3 style="margin-bottom:14px"><i class="fas fa-award"></i> Recompensas disponibles</h3>
         <?php if (!$recompensas): ?>

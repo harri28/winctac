@@ -244,6 +244,7 @@ $resultado = $aplicado ?? $preview;
   -H "Authorization: Bearer TU_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{"productos":[{"codigo":"12 0001","costo":6.00,"stock":11}]}'</pre>
+            <p style="margin-top:8px">Las compras de la tienda física (puntos) usan el mismo token en <code>POST <?= htmlspecialchars(BASE_URL) ?>/api/erp.php?action=compras</code>. Ver <a href="<?= BASE_URL ?>/admin/compras-tienda.php">Compras en tienda</a>.</p>
         </details>
     </div>
 </div>

@@ -210,7 +210,7 @@ apuntando a `161.132.4.82` (comprobar con `nslookup www.wintac.com.pe 8.8.8.8`).
    ```
    Correr `database/migrar.php` (paso 8: abrir temporalmente `/database/`).
    Crea las columnas `config.red_*` y `config.erp_api_token`, y las tablas
-   `mensajes_contacto` y `erp_sincronizaciones` (ver `docs/integracion-erp.md`).
+   `mensajes_contacto`, `erp_sincronizaciones` y `compras_tienda` (ver `docs/integracion-erp.md`).
 
 2. Certificado para los 4 dominios (con el server block actual, que todavía
    escucha en el puerto 80): agregar los dominios nuevos al `server_name`

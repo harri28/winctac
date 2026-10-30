@@ -8,7 +8,7 @@ require_once __DIR__ . '/../config/database.php';
 require_once __DIR__ . '/../includes/rate_limit.php';
 
 if (clienteLogueado()) {
-    header('Location: ' . ($_GET['redirect'] ?? (BASE_URL . '/')));
+    header('Location: ' . redirectInterno($_GET['redirect'] ?? null));
     exit;
 }
 
@@ -29,7 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($c && password_verify($pass, $c['password_hash'])) {
             limpiarIntentos($pdo, $clave);
             loginCliente($c);
-            header('Location: ' . ($_GET['redirect'] ?? (BASE_URL . '/')));
+            header('Location: ' . redirectInterno($_GET['redirect'] ?? null));
             exit;
         } else {
             registrarIntentoFallido($pdo, $clave);

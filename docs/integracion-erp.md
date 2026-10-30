@@ -131,7 +131,60 @@ sincronización automática depende de lo que confirme FoxSoft (ver
   porque la conexión sale del local hacia la web.
 - **Mientras tanto:** se usa la importación del listado desde el panel.
 
-## 3. Gestión de productos desde el panel
+## 3. Compras de la tienda física → Programa de puntos
+
+Las compras registradas en el ERP (comprobantes de la tienda física) también
+acumulan puntos, con la misma regla que las compras web:
+**puntos = piso(total × puntos por cada S/ 1)** (Admin → Fidelización →
+Programa de puntos).
+
+- **Identificación del cliente:** por su **DNI/CE**, que es obligatorio al
+  afiliarse (registro web). Los clientes registrados antes pueden completarlo
+  en *Mis puntos*.
+- **Sin doble acreditación:** el número de comprobante es único por tienda.
+  Un comprobante ya registrado se rechaza.
+- **DNI aún no afiliado:** la compra queda *pendiente de afiliación* y sus
+  puntos se acreditan automáticamente cuando esa persona se registra (o
+  completa su DNI).
+- **Comprobante anulado en el ERP:** se anula en el panel y los puntos se
+  revierten (movimiento *Revertido* en el historial del cliente).
+- Cada acreditación queda en el historial del cliente como
+  *Compra en tienda B001-000123*.
+
+Tres formas de registrar las compras, todas con las mismas reglas:
+
+| Forma | Dónde |
+|---|---|
+| Manual (un comprobante) | Admin → Fidelización → **Compras en tienda** → *Registrar compra* |
+| Reporte de ventas del ERP (.xlsx/.csv con DNI, Comprobante o Serie+Número, Fecha y Total) | Admin → Fidelización → **Compras en tienda** → *Importar ventas del ERP* |
+| Automática por API | `POST /api/erp.php?action=compras` |
+
+### API: registrar compras
+
+```http
+POST https://www.wintac.com.pe/api/erp.php?action=compras
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+```json
+{
+  "compras": [
+    {"dni": "45678912", "comprobante": "B001-000123", "fecha": "2026-10-29", "monto": 85.90}
+  ]
+}
+```
+`fecha` acepta `AAAA-MM-DD` o `DD/MM/AAAA`. Respuesta, con el resultado de
+cada comprobante (los errores no afectan a los demás):
+```json
+{
+  "success": true, "total": 1, "otorgados": 1, "pendientes": 0, "errores": 0, "puntos": 85,
+  "resultados": [{"comprobante": "B001-000123", "estado": "otorgado", "puntos": 85}]
+}
+```
+`estado` puede ser `otorgado`, `pendiente` (DNI no afiliado aún) o `error`
+(con el motivo en `error`).
+
+## 4. Gestión de productos desde el panel
 
 Además de la sincronización, el administrador gestiona el catálogo en
 **Admin → Productos**:
@@ -153,3 +206,19 @@ Además de la sincronización, el administrador gestiona el catálogo en
    vista previa, aplicar y mostrar el historial.
 5. API: `ping` y una petición con `"simular": true`, con la respuesta.
 6. Ocultar o eliminar el producto de prueba.
+
+### Guion de demostración — Programa de puntos
+
+1. Admin → Fidelización → **Beneficios / Recompensas**: tener al menos una
+   recompensa activa (por ejemplo, 100 pts = S/ 10 de descuento).
+2. **Afiliación:** `/cuenta/registro` con nombre, DNI, celular y correo
+   (DNI y celular obligatorios).
+3. **Compra web:** hacer un pedido con esa cuenta y confirmarlo en Admin →
+   Pedidos; los puntos se acreditan.
+4. **Compra en tienda física / ERP:** Admin → Compras en tienda → registrar un
+   comprobante con el DNI del cliente (o importar el reporte de ventas).
+5. **Consulta de saldo en línea:** `/cuenta/puntos` muestra el saldo y el
+   historial (compra web y *Compra en tienda …*).
+6. **Canje:** en `/cuenta/puntos`, *Canjear* una recompensa; se genera un
+   cupón `PTS-XXXXXX` y se descuentan los puntos.
+7. Usar el cupón en el checkout de un nuevo pedido.
