@@ -40,31 +40,50 @@ $desc      = $producto['descripcion'] ?? $producto['detalle'] ?? '';
 $codigo    = $producto['codigo'] ?? '';
 $shopNom   = $cfg['nombre_tienda'] ?? 'Mi Tienda Online';
 
-$productUrl = BASE_URL . '/producto.php?id=' . $id;
+$productUrl = urlProducto($id, $nombre);
 $waText     = urlencode("🛍️ *" . $nombre . "*\nS/ " . number_format($precio, 2) . "\n👉 " . $productUrl);
 
-$ogData = [
-    'title'       => $nombre . ' — ' . $shopNom,
-    'description' => $desc ?: 'Precio: S/ ' . number_format($precio, 2) . ($categoria ? ' · ' . $categoria : ''),
-    'image'       => $imagen,
-    'url'         => $productUrl,
-    'type'        => 'product',
-];
+$metaDescription = mb_substr(trim(strip_tags($desc)), 0, 160)
+    ?: $nombre . ' — Precio: S/ ' . number_format($precio, 2) . ($categoria ? ' · ' . $categoria : '');
+$canonicalUrl = $productUrl;
+$ogData = array_filter([
+    'title' => $nombre . ' — ' . $shopNom,
+    'image' => $imagen,
+    'type'  => 'product',
+]);
 
-$pageTitle   = htmlspecialchars($nombre) . ' — ' . htmlspecialchars($shopNom);
+$pageTitle   = $nombre;
 $currentPage = 'catalogo';
 require_once __DIR__ . '/includes/header.php';
 ?>
+
+<script type="application/ld+json"><?= json_encode(array_filter([
+    '@context'    => 'https://schema.org',
+    '@type'       => 'Product',
+    'name'        => $nombre,
+    'image'       => $imagen ?: null,
+    'description' => $metaDescription,
+    'sku'         => $codigo ?: null,
+    'brand'       => !empty($producto['marca']) ? ['@type' => 'Brand', 'name' => $producto['marca']] : null,
+    'category'    => $categoria ?: null,
+    'offers'      => [
+        '@type'         => 'Offer',
+        'url'           => $productUrl,
+        'priceCurrency' => 'PEN',
+        'price'         => number_format($precio, 2, '.', ''),
+        'availability'  => $stock > 0 ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+    ],
+]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
 
 <!-- Breadcrumb -->
 <div class="breadcrumb">
     <div class="breadcrumb-inner">
         <a href="<?= BASE_URL ?>/">Inicio</a>
         <i class="fas fa-chevron-right bc-sep"></i>
-        <a href="<?= BASE_URL ?>/catalogo.php?categoria=all">Catálogo</a>
+        <a href="<?= BASE_URL ?>/catalogo?categoria=all">Catálogo</a>
         <?php if ($categoria): ?>
         <i class="fas fa-chevron-right bc-sep"></i>
-        <a href="<?= BASE_URL ?>/catalogo.php?categoria=<?= urlencode($catId ?: $categoria) ?>"><?= htmlspecialchars($categoria) ?></a>
+        <a href="<?= BASE_URL ?>/catalogo?categoria=<?= urlencode($catId ?: $categoria) ?>"><?= htmlspecialchars($categoria) ?></a>
         <?php endif; ?>
         <i class="fas fa-chevron-right bc-sep"></i>
         <span><?= htmlspecialchars($nombre) ?></span>
@@ -171,7 +190,7 @@ require_once __DIR__ . '/includes/header.php';
                 <?= $categoria ? 'Más de ' . htmlspecialchars($categoria) : 'Productos relacionados' ?>
             </h2>
             <?php if ($categoria): ?>
-            <a href="<?= BASE_URL ?>/catalogo.php?categoria=<?= urlencode($catId ?: $categoria) ?>" class="btn btn-secondary" style="font-size:.82rem">
+            <a href="<?= BASE_URL ?>/catalogo?categoria=<?= urlencode($catId ?: $categoria) ?>" class="btn btn-secondary" style="font-size:.82rem">
                 Ver todos <i class="fas fa-arrow-right"></i>
             </a>
             <?php endif; ?>
@@ -266,7 +285,7 @@ function cardHTML(p) {
         ? `<img class="product-img" src="${p.imagen}" alt="${p.nombre}" loading="lazy" onerror="this.parentElement.innerHTML='<div class=\'product-img-placeholder\'><i class=\'fas fa-box\'></i></div>'">`
         : `<div class="product-img-placeholder"><i class="fas fa-box"></i></div>`;
     return `
-    <div class="product-card" style="cursor:pointer" onclick="if(!event.target.closest('.btn-add-cart')) window.location.href=window.BASE_URL + '/producto.php?id=${p.id}'">
+    <div class="product-card" style="cursor:pointer" onclick="if(!event.target.closest('.btn-add-cart')) window.location.href=urlProducto(${p.id}, this.dataset.nombre)" data-nombre="${p.nombre.replace(/"/g,'&quot;')}">
         ${imgHTML}
         <div class="product-body">
             <div class="product-category">${p.categoria || ''}</div>

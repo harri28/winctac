@@ -192,3 +192,52 @@ No hace falta reiniciar nginx ni PHP-FPM para cambios de código PHP normales
 El seed inicial crea un admin con `admin@tienda.com` / `admin123`. Entra a
 `https://wintac.shop/admin/login.php` y cambia esa contraseña cuanto antes;
 son credenciales públicas en el código fuente.
+
+## 11. Dominio www.wintac.com.pe y URLs amigables
+
+El dominio principal pasa a ser **`https://www.wintac.com.pe`** (requisito de
+la evaluación). `wintac.com.pe`, `wintac.shop` y `www.wintac.shop` quedan
+redirigiendo con 301 al principal, para no romper enlaces antiguos. Las
+páginas públicas se sirven sin `.php` (`/nosotros`, `/producto/123/nombre`),
+y el server block completo está versionado en `deploy/nginx-wintac.conf`.
+
+Requisito previo: los registros DNS `A @` y `A www` de `wintac.com.pe`
+apuntando a `161.132.4.82` (comprobar con `nslookup www.wintac.com.pe 8.8.8.8`).
+
+1. Código y migraciones:
+   ```bash
+   cd /var/www/ecomerce && git pull origin main && chown -R www-data:www-data uploads
+   ```
+   Correr `database/migrar.php` (paso 8: abrir temporalmente `/database/`).
+   Crea las columnas `config.red_*` y la tabla `mensajes_contacto`.
+
+2. Certificado para los 4 dominios (con el server block actual, que todavía
+   escucha en el puerto 80): agregar los dominios nuevos al `server_name`
+   del bloque `listen 80` de `/etc/nginx/sites-available/wintac.shop`,
+   `nginx -t && systemctl reload nginx`, y luego:
+   ```bash
+   certbot certonly --nginx --cert-name www.wintac.com.pe \
+     -d www.wintac.com.pe -d wintac.com.pe -d wintac.shop -d www.wintac.shop
+   ```
+
+3. Reemplazar el server block por el versionado (guarda una copia del actual):
+   ```bash
+   cp /etc/nginx/sites-available/wintac.shop /root/wintac.shop.bak
+   cp /var/www/ecomerce/deploy/nginx-wintac.conf /etc/nginx/sites-available/wintac.shop
+   ```
+
+4. Hostname de la tienda y URL base:
+   ```bash
+   sudo -u postgres psql -p 5433 -d selvadigital -c "UPDATE tiendas SET hostname = 'www.wintac.com.pe' WHERE hostname = 'wintac.shop';"
+   sudo -u postgres psql -p 5433 -d selvadigital -c "UPDATE banners SET enlace = REPLACE(enlace, 'https://wintac.shop', 'https://www.wintac.com.pe') WHERE enlace LIKE '%wintac.shop%';"
+   sed -i 's#env\[ECOMMERCE_BASE_URL\] = .*#env[ECOMMERCE_BASE_URL] = https://www.wintac.com.pe#' /etc/php/8.1/fpm/pool.d/wintac.conf
+   systemctl restart php8.1-fpm && nginx -t && systemctl reload nginx
+   ```
+
+5. Verificar:
+   ```bash
+   curl -sI https://wintac.shop/nosotros.php | grep -i location     # → https://www.wintac.com.pe/nosotros.php → /nosotros
+   curl -sI https://www.wintac.com.pe/nosotros | head -1             # → 200
+   curl -s  https://www.wintac.com.pe/robots.txt
+   ```
+   Luego registrar `https://www.wintac.com.pe/sitemap.xml` en Google Search Console.

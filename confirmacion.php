@@ -161,11 +161,11 @@ require_once __DIR__ . '/includes/header.php';
                         <i class="fas fa-store"></i> Seguir comprando
                     </a>
                     <?php if (clienteLogueado()): ?>
-                    <a href="<?= BASE_URL ?>/cuenta/mis-pedidos.php" class="btn btn-outline" style="flex:1;justify-content:center">
+                    <a href="<?= BASE_URL ?>/cuenta/mis-pedidos" class="btn btn-outline" style="flex:1;justify-content:center">
                         <i class="fas fa-list"></i> Mis pedidos
                     </a>
                     <?php else: ?>
-                    <a href="<?= BASE_URL ?>/cuenta/registro.php" class="btn btn-outline" style="flex:1;justify-content:center">
+                    <a href="<?= BASE_URL ?>/cuenta/registro" class="btn btn-outline" style="flex:1;justify-content:center">
                         <i class="fas fa-user-plus"></i> Crear cuenta
                     </a>
                     <?php endif; ?>

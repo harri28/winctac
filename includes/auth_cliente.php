@@ -18,7 +18,7 @@ function clienteNombre(): string {
 function requireClienteAuth(): void {
     if (!clienteLogueado()) {
         $redirect = urlencode($_SERVER['REQUEST_URI']);
-        header('Location: ' . BASE_URL . '/cuenta/login.php?redirect=' . $redirect);
+        header('Location: ' . BASE_URL . '/cuenta/login?redirect=' . $redirect);
         exit;
     }
 }

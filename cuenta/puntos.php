@@ -40,7 +40,7 @@ $estadoLabel = ['activo' => 'Activo', 'usado' => 'Usado', 'vencido' => 'Vencido'
     <div class="container">
         <div class="section-header" style="margin-bottom:24px">
             <h2 class="section-title"><i class="fas fa-star"></i> Mis Puntos</h2>
-            <a href="<?= BASE_URL ?>/cuenta/mis-pedidos.php" class="btn btn-secondary"><i class="fas fa-list"></i> Mis pedidos</a>
+            <a href="<?= BASE_URL ?>/cuenta/mis-pedidos" class="btn btn-secondary"><i class="fas fa-list"></i> Mis pedidos</a>
         </div>
 
         <div class="card" style="margin-bottom:24px;text-align:center;padding:28px">

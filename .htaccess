@@ -1,0 +1,40 @@
+# ============================================================
+# URLs amigables (Apache / XAMPP local)
+# En producción el servidor es nginx: las mismas reglas están en
+# deploy/nginx-wintac.conf — mantener ambos archivos sincronizados.
+# ============================================================
+Options -MultiViews
+RewriteEngine On
+
+# Ruta base del directorio (/ecomerce/ en local, / en la raíz de un dominio)
+RewriteCond %{REQUEST_URI}::$1 ^(.*?/)(.*)::\2$
+RewriteRule ^(.*)$ - [E=BASE:%1]
+
+# sitemap.xml y robots.txt se generan dinámicamente por tienda
+RewriteRule ^sitemap\.xml$ sitemap.php [L]
+RewriteRule ^robots\.txt$ robots.php [L]
+
+# Enlace antiguo con error de escritura (citado en el informe de evaluación)
+RewriteRule ^trabajacon-nosotros(\.php)?$ %{ENV:BASE}trabaja-con-nosotros [R=301,L]
+
+# 301 de las URLs antiguas con ".php" a su versión limpia (solo GET y solo
+# peticiones originales del navegador, no las reescrituras internas de abajo)
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteCond %{THE_REQUEST} /producto\.php\?(?:[^\s]*&)?id=(\d+)
+RewriteRule ^producto\.php$ %{ENV:BASE}producto/%1? [R=301,L]
+
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteCond %{THE_REQUEST} \.php[\s?]
+RewriteRule ^index\.php$ %{ENV:BASE} [R=301,L]
+
+RewriteCond %{REQUEST_METHOD} =GET
+RewriteCond %{THE_REQUEST} \.php[\s?]
+RewriteRule ^((?:cuenta/)?[a-z][a-z-]*)\.php$ %{ENV:BASE}$1 [R=301,L]
+
+# /producto/{id}/{slug} → producto.php?id={id}
+RewriteRule ^producto/(\d+)(?:/[^/]*)?/?$ producto.php?id=$1 [L,QSA]
+
+# /pagina → pagina.php
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [L]

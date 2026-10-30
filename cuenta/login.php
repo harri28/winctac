@@ -79,7 +79,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                 <div style="text-align:center;margin-top:20px;font-size:.9rem;color:var(--text-muted)">
                     ¿No tienes cuenta?
-                    <a href="<?= BASE_URL ?>/cuenta/registro.php<?= isset($_GET['redirect']) ? '?redirect='.urlencode($_GET['redirect']) : '' ?>">
+                    <a href="<?= BASE_URL ?>/cuenta/registro<?= isset($_GET['redirect']) ? '?redirect='.urlencode($_GET['redirect']) : '' ?>">
                         Regístrate aquí
                     </a>
                 </div>

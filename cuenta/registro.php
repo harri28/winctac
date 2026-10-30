@@ -123,7 +123,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </form>
 
                 <div style="text-align:center;margin-top:20px;font-size:.9rem;color:var(--text-muted)">
-                    ¿Ya tienes cuenta? <a href="<?= BASE_URL ?>/cuenta/login.php">Inicia sesión</a>
+                    ¿Ya tienes cuenta? <a href="<?= BASE_URL ?>/cuenta/login">Inicia sesión</a>
                 </div>
             </div>
         </div>

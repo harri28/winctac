@@ -1,6 +1,7 @@
 <?php
 $pageTitle   = 'Nosotros';
 $currentPage = 'nosotros';
+$metaDescription = 'Conoce nuestra historia, misión y visión, y únete a nuestro equipo.';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/config/database.php';
 
@@ -49,7 +50,7 @@ if (!empty($cfg['puntos_activo']) && clienteLogueado()) {
         <h1><?= $shopName ?></h1>
         <p>Calidad, confianza y cercanía en cada compra</p>
     </div>
-    <a href="<?= BASE_URL ?>/" class="corp-hero-cta">
+    <a href="<?= BASE_URL ?>/catalogo" class="corp-hero-cta">
         <i class="fas fa-store"></i> Ver catálogo
     </a>
 </section>
@@ -78,7 +79,7 @@ if (!empty($cfg['puntos_activo']) && clienteLogueado()) {
             <div class="corp-action-icon"><i class="fas fa-briefcase"></i></div>
             <h3>Trabaja con nosotros</h3>
             <p>Estamos creciendo y buscamos gente comprometida. Postula dejando tus datos y tu CV.</p>
-            <a href="<?= BASE_URL ?>/trabaja-con-nosotros.php" class="btn btn-primary btn-lg">
+            <a href="<?= BASE_URL ?>/trabaja-con-nosotros" class="btn btn-primary btn-lg">
                 <i class="fas fa-arrow-right"></i> Postula aquí
             </a>
         </div>
@@ -91,7 +92,7 @@ if (!empty($cfg['puntos_activo']) && clienteLogueado()) {
             <?php else: ?>
             <p>Inicia sesión para ver tu saldo de puntos y tus cupones disponibles.</p>
             <?php endif; ?>
-            <a href="<?= BASE_URL ?>/cuenta/puntos.php" class="btn btn-primary btn-lg">
+            <a href="<?= BASE_URL ?>/cuenta/puntos" class="btn btn-primary btn-lg">
                 <i class="fas fa-arrow-right"></i> Ver mis puntos
             </a>
         </div>
@@ -134,7 +135,7 @@ if (!empty($cfg['puntos_activo']) && clienteLogueado()) {
     <div class="corp-cta">
         <h2>¿Listo para comprar?</h2>
         <p>Explora nuestro catálogo y encuentra lo que necesitas.</p>
-        <a href="<?= BASE_URL ?>/" class="btn btn-lg corp-cta-btn">
+        <a href="<?= BASE_URL ?>/catalogo" class="btn btn-lg corp-cta-btn">
             <i class="fas fa-arrow-right"></i> Ir al catálogo
         </a>
     </div>

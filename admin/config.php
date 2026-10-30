@@ -15,7 +15,8 @@ $error   = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     $fields = ['nombre_tienda','descripcion','whatsapp_numero','whatsapp_mensaje',
                'banco_nombre','banco_cuenta','banco_cci','banco_titular',
-               'contacto_email','contacto_celular','color_primary'];
+               'contacto_email','contacto_celular','color_primary',
+               'red_facebook','red_instagram','red_tiktok','red_youtube','red_linkedin'];
 
     $sets = implode(', ', array_map(fn($f) => "$f = :$f", $fields));
     $params = [];
@@ -161,6 +162,25 @@ $empresas = $pdo->query('SELECT * FROM empresas_envio ORDER BY id')->fetchAll();
             <textarea name="whatsapp_mensaje" class="form-control" rows="3"><?= htmlspecialchars($cfg['whatsapp_mensaje'] ?? '') ?></textarea>
             <div class="form-hint">Usa {codigo} y {total} como variables</div>
         </div>
+        <div class="form-hint">El número también activa el botón flotante de WhatsApp y los accesos de Inicio y Contacto.</div>
+    </div>
+
+    <!-- Redes sociales -->
+    <div class="card">
+        <div class="card-title"><i class="fas fa-share-nodes"></i> Redes sociales</div>
+        <?php foreach ([
+            'red_facebook'  => ['Facebook',  'fab fa-facebook-f', 'https://facebook.com/tuempresa'],
+            'red_instagram' => ['Instagram', 'fab fa-instagram',  'https://instagram.com/tuempresa'],
+            'red_tiktok'    => ['TikTok',    'fab fa-tiktok',     'https://tiktok.com/@tuempresa'],
+            'red_youtube'   => ['YouTube',   'fab fa-youtube',    'https://youtube.com/@tuempresa'],
+            'red_linkedin'  => ['LinkedIn',  'fab fa-linkedin-in','https://linkedin.com/company/tuempresa'],
+        ] as $campo => [$label, $icon, $ph]): ?>
+        <div class="form-group">
+            <label class="form-label"><i class="<?= $icon ?>"></i> <?= $label ?></label>
+            <input type="url" name="<?= $campo ?>" class="form-control" placeholder="<?= $ph ?>" value="<?= htmlspecialchars($cfg[$campo] ?? '') ?>">
+        </div>
+        <?php endforeach; ?>
+        <div class="form-hint">Deja vacía la red que no uses. Se muestran en Inicio, Contacto y el pie de página.</div>
     </div>
 
 </div>

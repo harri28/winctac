@@ -675,7 +675,7 @@ function abrirEditar(p) {
     if (!Array.isArray(tagsActuales)) tagsActuales = [];
     renderTags();
 
-    const productoUrl = window.BASE_URL + '/producto.php?id=' + p.id;
+    const productoUrl = window.BASE_URL + '/producto/' + p.id;
     document.getElementById('qr-img').src = 'https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=' + encodeURIComponent(productoUrl);
     document.getElementById('qr-section').style.display = 'block';
 

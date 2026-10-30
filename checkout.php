@@ -105,7 +105,7 @@ $logueado = clienteLogueado();
 
     </div>
     <p style="text-align:center;font-size:.85rem;color:var(--text-muted)">
-        ¿Ya tienes cuenta? <a href="<?= BASE_URL ?>/cuenta/login.php?redirect=<?= urlencode(BASE_URL . '/checkout.php') ?>">Inicia sesión aquí</a>
+        ¿Ya tienes cuenta? <a href="<?= BASE_URL ?>/cuenta/login?redirect=<?= urlencode(BASE_URL . '/checkout') ?>">Inicia sesión aquí</a>
     </p>
 </div>
 <?php endif; ?>
@@ -125,7 +125,7 @@ $logueado = clienteLogueado();
                 <?php if ($logueado): ?>
                 <span style="font-size:.75rem;color:var(--text-muted);font-weight:400;margin-left:8px">
                     Cuenta: <?= htmlspecialchars(clienteNombre()) ?>
-                    — <a href="<?= BASE_URL ?>/cuenta/logout.php" style="color:var(--danger)">Cerrar sesión</a>
+                    — <a href="<?= BASE_URL ?>/cuenta/logout" style="color:var(--danger)">Cerrar sesión</a>
                 </span>
                 <?php endif; ?>
             </div>
@@ -351,7 +351,7 @@ $logueado = clienteLogueado();
             <i class="fas fa-check"></i> Confirmar pedido
         </button>
 
-        <a href="<?= BASE_URL ?>/carrito.php" class="btn btn-secondary btn-full" style="margin-top:10px;font-size:.85rem">
+        <a href="<?= BASE_URL ?>/carrito" class="btn btn-secondary btn-full" style="margin-top:10px;font-size:.85rem">
             <i class="fas fa-arrow-left"></i> Volver al carrito
         </a>
 
@@ -520,7 +520,7 @@ async function aplicarCupon() {
 
 function renderResumen() {
     const items = Carrito.get();
-    if (!items.length) { window.location = window.BASE_URL + '/carrito.php'; return; }
+    if (!items.length) { window.location = window.BASE_URL + '/carrito'; return; }
 
     document.getElementById('order-items').innerHTML = items.map(i =>
         `<div class="summary-row">
@@ -540,7 +540,7 @@ restaurarEnvio();
 // ── Confirmar pedido ──
 async function confirmarPedido() {
     const items = Carrito.get();
-    if (!items.length) { window.location = window.BASE_URL + '/carrito.php'; return; }
+    if (!items.length) { window.location = window.BASE_URL + '/carrito'; return; }
 
     const errDiv  = document.getElementById('error-msg');
     errDiv.style.display = 'none';
@@ -628,7 +628,7 @@ async function confirmarPedido() {
 
         Carrito.limpiar();
         sessionStorage.removeItem('sd_envio');
-        window.location = window.BASE_URL + '/confirmacion.php?pedido=' + encodeURIComponent(data.codigo);
+        window.location = window.BASE_URL + '/confirmacion?pedido=' + encodeURIComponent(data.codigo);
     } catch(e) {
         btn.disabled = false;
         btn.innerHTML = '<i class="fas fa-check"></i> Confirmar pedido';

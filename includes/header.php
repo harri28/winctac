@@ -12,34 +12,84 @@ $currentPage = $currentPage ?? '';
 $faviconOk = !empty($cfg['logo_path']) && file_exists(UPLOADS_PATH . '/' . $cfg['logo_path']);
 $faviconTypes = ['svg' => 'image/svg+xml', 'png' => 'image/png', 'gif' => 'image/gif', 'webp' => 'image/webp', 'jpg' => 'image/jpeg', 'jpeg' => 'image/jpeg'];
 $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path'], PATHINFO_EXTENSION))] ?? 'image/jpeg') : '';
+
+// ── SEO: título, descripción y URL canónica de cada página ──
+// Cada página puede fijar $pageTitle, $metaDescription y $canonicalUrl antes
+// de incluir este header; si no, se derivan de la config y de la URL limpia
+// (sin ".php", sin "index", sin query string).
+$shopNameRaw = $cfg['nombre_tienda'] ?? 'Mi Tienda Online';
+$fullTitle = (!empty($pageTitle) && $currentPage !== 'home') ? $pageTitle . ' | ' . $shopNameRaw : $shopNameRaw;
+$metaDescription = trim($metaDescription ?? '') ?: trim($cfg['descripcion'] ?? '')
+    ?: $shopNameRaw . ': catálogo virtual de productos, programa de puntos y atención al cliente por WhatsApp.';
+if (empty($canonicalUrl)) {
+    $basePathUrl = rtrim(parse_url(BASE_URL, PHP_URL_PATH) ?? '', '/');
+    $reqPath = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?: '/';
+    if ($basePathUrl !== '' && strpos($reqPath, $basePathUrl) === 0) $reqPath = substr($reqPath, strlen($basePathUrl));
+    $reqPath = preg_replace('#(/index)?\.php$#', '', $reqPath);
+    $canonicalUrl = BASE_URL . ($reqPath === '' ? '/' : $reqPath);
+}
+$ogData = array_merge([
+    'title'       => $fullTitle,
+    'description' => $metaDescription,
+    'url'         => $canonicalUrl,
+    'type'        => 'website',
+    'image'       => $faviconOk ? UPLOADS_URL . '/' . $cfg['logo_path'] : '',
+], $ogData ?? []);
+
+$navItems = [
+    ['home',                 BASE_URL . '/',                     'Inicio'],
+    ['nosotros',             BASE_URL . '/nosotros',             'Nosotros'],
+    ['catalogo',             BASE_URL . '/catalogo',             'Catálogo'],
+];
+if (!empty($cfg['puntos_activo'])) {
+    $navItems[] = ['puntos', BASE_URL . '/cuenta/puntos', 'Programa de puntos'];
+}
+$navItems[] = ['trabaja-con-nosotros', BASE_URL . '/trabaja-con-nosotros', 'Trabaja con nosotros'];
+$navItems[] = ['contacto',             BASE_URL . '/contacto',             'Contacto'];
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><?= $pageTitle ?? $shopName ?></title>
+    <title><?= htmlspecialchars($fullTitle) ?></title>
+    <link rel="canonical" href="<?= htmlspecialchars($canonicalUrl) ?>">
     <?php if ($faviconOk): ?>
     <link rel="icon" type="<?= $faviconType ?>" href="<?= UPLOADS_URL ?>/<?= htmlspecialchars($cfg['logo_path']) ?>">
     <?php endif; ?>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=37">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=38">
     <?= brandColorStyleTag($cfg) ?>
     <script>
         window.BASE_URL = "<?= BASE_URL ?>";
         window.MOSTRAR_STOCK = <?= !empty($cfg['mostrar_stock']) ? 'true' : 'false' ?>;
     </script>
-    <?php if (!empty($ogData)): ?>
-    <meta name="description" content="<?= htmlspecialchars($ogData['description'] ?? '') ?>">
-    <meta property="og:title"       content="<?= htmlspecialchars($ogData['title'] ?? $shopName) ?>">
-    <meta property="og:description" content="<?= htmlspecialchars($ogData['description'] ?? '') ?>">
-    <meta property="og:url"         content="<?= htmlspecialchars($ogData['url'] ?? '') ?>">
-    <meta property="og:type"        content="<?= htmlspecialchars($ogData['type'] ?? 'website') ?>">
+    <?php if ($ogData['description'] !== ''): ?>
+    <meta name="description" content="<?= htmlspecialchars($ogData['description']) ?>">
+    <?php endif; ?>
+    <meta property="og:site_name"   content="<?= $shopName ?>">
+    <meta property="og:locale"      content="es_PE">
+    <meta property="og:title"       content="<?= htmlspecialchars($ogData['title']) ?>">
+    <meta property="og:description" content="<?= htmlspecialchars($ogData['description']) ?>">
+    <meta property="og:url"         content="<?= htmlspecialchars($ogData['url']) ?>">
+    <meta property="og:type"        content="<?= htmlspecialchars($ogData['type']) ?>">
     <?php if (!empty($ogData['image'])): ?>
     <meta property="og:image"       content="<?= htmlspecialchars($ogData['image']) ?>">
     <?php endif; ?>
+    <?php if ($currentPage === 'home'): ?>
+    <script type="application/ld+json"><?= json_encode(array_filter([
+        '@context'  => 'https://schema.org',
+        '@type'     => 'Organization',
+        'name'      => $shopNameRaw,
+        'url'       => BASE_URL . '/',
+        'logo'      => $ogData['image'] ?: null,
+        'email'     => trim($cfg['contacto_email'] ?? '') ?: null,
+        'telephone' => trim($cfg['contacto_celular'] ?? '') ?: null,
+        'address'   => trim($cfg['portal_direccion'] ?? '') ?: null,
+        'sameAs'    => array_column(redesSociales($cfg), 'url') ?: null,
+    ]), JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) ?></script>
     <?php endif; ?>
 </head>
 <body>
@@ -71,12 +121,6 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
             </div>
         </div>
 
-        <!-- Nav -->
-        <nav class="header-nav">
-            <a href="<?= BASE_URL ?>/" class="<?= $currentPage === 'home' ? 'active' : '' ?>">Inicio</a>
-            <a href="<?= BASE_URL ?>/catalogo.php" class="<?= $currentPage === 'catalogo' ? 'active' : '' ?>">Catálogo</a>
-        </nav>
-
         <!-- Buscador -->
         <div class="header-search-wrap">
             <i class="fas fa-search"></i>
@@ -86,28 +130,37 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
         <!-- Acciones -->
         <div class="header-actions">
             <?php if (clienteLogueado()): ?>
-                <a href="<?= BASE_URL ?>/cuenta/mis-pedidos.php" class="user-btn">
+                <a href="<?= BASE_URL ?>/cuenta/mis-pedidos" class="user-btn">
                     <i class="fas fa-user"></i>
                     <span class="user-btn-label"><?= htmlspecialchars(clienteNombre()) ?></span>
                 </a>
-                <a href="<?= BASE_URL ?>/cuenta/puntos.php" class="user-btn" title="Mis puntos">
+                <a href="<?= BASE_URL ?>/cuenta/puntos" class="user-btn" title="Mis puntos">
                     <i class="fas fa-star"></i>
                 </a>
-                <a href="<?= BASE_URL ?>/cuenta/logout.php" class="user-btn" title="Cerrar sesión">
+                <a href="<?= BASE_URL ?>/cuenta/logout" class="user-btn" title="Cerrar sesión">
                     <i class="fas fa-sign-out-alt"></i>
                 </a>
             <?php else: ?>
-                <a href="<?= BASE_URL ?>/cuenta/login.php" class="user-btn">
+                <a href="<?= BASE_URL ?>/cuenta/login" class="user-btn">
                     <i class="fas fa-user"></i> <span class="user-btn-label">Ingresar</span>
                 </a>
             <?php endif; ?>
 
-            <a href="<?= BASE_URL ?>/carrito.php" class="cart-btn" title="Carrito" aria-label="Carrito">
+            <a href="<?= BASE_URL ?>/carrito" class="cart-btn" title="Carrito" aria-label="Carrito">
                 <i class="fas fa-shopping-cart"></i>
                 <span class="cart-badge" id="cart-badge">0</span>
             </a>
         </div>
     </div>
+
+    <!-- Navegación institucional: en celulares se desplaza horizontalmente -->
+    <nav class="site-subnav" aria-label="Secciones">
+        <div class="site-subnav-inner">
+            <?php foreach ($navItems as [$page, $href, $label]): ?>
+            <a href="<?= $href ?>" class="<?= $currentPage === $page ? 'active' : '' ?>"><?= $label ?></a>
+            <?php endforeach; ?>
+        </div>
+    </nav>
 </header>
 
 <script>
@@ -130,7 +183,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
         if (typeof window.filtrarCategoriaInicio === 'function') {
             window.filtrarCategoriaInicio(id, nombre, el);
         } else {
-            window.location.href = window.BASE_URL + '/catalogo.php?categoria=' + encodeURIComponent(id);
+            window.location.href = window.BASE_URL + '/catalogo?categoria=' + encodeURIComponent(id);
         }
         catWrap.classList.remove('open');
     }
@@ -169,7 +222,7 @@ $faviconType = $faviconOk ? ($faviconTypes[strtolower(pathinfo($cfg['logo_path']
         if (e.key !== 'Enter') return;
         e.preventDefault();
         if (typeof window.filtrarBusquedaInicio !== 'function') {
-            window.location.href = window.BASE_URL + '/catalogo.php?q=' + encodeURIComponent(searchInput.value);
+            window.location.href = window.BASE_URL + '/catalogo?q=' + encodeURIComponent(searchInput.value);
         }
     });
 })();

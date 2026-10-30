@@ -4,6 +4,7 @@
 // ============================================================
 $pageTitle   = 'Trabaja con nosotros';
 $currentPage = 'trabaja-con-nosotros';
+$metaDescription = 'Postula a nuestras vacantes: déjanos tus datos y tu CV en PDF.';
 require_once __DIR__ . '/includes/header.php';
 require_once __DIR__ . '/config/database.php';
 
@@ -64,7 +65,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <?php if ($success): ?>
                     <div class="auth-title"><i class="fas fa-circle-check" style="color:var(--success)"></i> ¡Postulación enviada!</div>
                     <div class="auth-sub">Gracias por tu interés. Revisaremos tu información y nos pondremos en contacto si tu perfil encaja con una vacante.</div>
-                    <a href="<?= BASE_URL ?>/nosotros.php" class="btn btn-secondary btn-full btn-lg" style="margin-top:20px">
+                    <a href="<?= BASE_URL ?>/nosotros" class="btn btn-secondary btn-full btn-lg" style="margin-top:20px">
                         <i class="fas fa-arrow-left"></i> Volver a Nosotros
                     </a>
                 <?php else: ?>

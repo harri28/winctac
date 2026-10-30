@@ -256,6 +256,26 @@ $migraciones = [
     // ── Ampliar % de costeo: con costo casi cero el margen puede dispararse a millones ──
     'productos_minimo_porcentaje_widen' => "ALTER TABLE productos ALTER COLUMN minimo_porcentaje TYPE DECIMAL(12,2)",
     'productos_lista_porcentaje_widen'  => "ALTER TABLE productos ALTER COLUMN lista_porcentaje TYPE DECIMAL(12,2)",
+
+    // ── Redes sociales de la tienda (header/footer/contacto) ──
+    'config_red_facebook'  => "ALTER TABLE config ADD COLUMN IF NOT EXISTS red_facebook VARCHAR(300) DEFAULT ''",
+    'config_red_instagram' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS red_instagram VARCHAR(300) DEFAULT ''",
+    'config_red_tiktok'    => "ALTER TABLE config ADD COLUMN IF NOT EXISTS red_tiktok VARCHAR(300) DEFAULT ''",
+    'config_red_youtube'   => "ALTER TABLE config ADD COLUMN IF NOT EXISTS red_youtube VARCHAR(300) DEFAULT ''",
+    'config_red_linkedin'  => "ALTER TABLE config ADD COLUMN IF NOT EXISTS red_linkedin VARCHAR(300) DEFAULT ''",
+
+    // ── Mensajes del formulario público de Contacto ──
+    'mensajes_contacto_table' => "CREATE TABLE IF NOT EXISTS mensajes_contacto (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        nombre VARCHAR(150) NOT NULL,
+        email VARCHAR(150) NOT NULL,
+        telefono VARCHAR(20) DEFAULT '',
+        asunto VARCHAR(150) DEFAULT '',
+        mensaje TEXT NOT NULL,
+        estado VARCHAR(20) NOT NULL DEFAULT 'nuevo',
+        created_at TIMESTAMP DEFAULT NOW()
+    )",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

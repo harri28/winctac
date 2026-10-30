@@ -46,6 +46,14 @@ try {
 } catch (Exception $e) {
     $postulantesNuevasCount = 0;
 }
+
+try {
+    $mensajesNuevosStmt = getDB()->prepare("SELECT COUNT(*) FROM mensajes_contacto WHERE estado = 'nuevo' AND tienda_id = ?");
+    $mensajesNuevosStmt->execute([TIENDA_ID]);
+    $mensajesNuevosCount = (int) $mensajesNuevosStmt->fetchColumn();
+} catch (Exception $e) {
+    $mensajesNuevosCount = 0;
+}
 ?>
 <!DOCTYPE html>
 <html lang="es">
@@ -118,7 +126,6 @@ try {
             ['type' => 'group', 'icon' => 'fa-box', 'label' => 'Productos', 'children' => [
                 ['page' => 'productos', 'href' => BASE_URL . '/admin/productos.php', 'icon' => 'fa-box-open', 'label' => 'Productos'],
                 ['page' => 'categorias', 'href' => BASE_URL . '/admin/categorias.php', 'icon' => 'fa-tags', 'label' => 'Categorías'],
-                ['page' => 'inventario', 'href' => BASE_URL . '/admin/inventario.php', 'icon' => 'fa-warehouse', 'label' => 'Inventario'],
             ]],
             ['type' => 'group', 'icon' => 'fa-users', 'label' => 'Clientes', 'children' => [
                 ['page' => 'clientes', 'href' => BASE_URL . '/admin/clientes.php', 'icon' => 'fa-user', 'label' => 'Clientes'],
@@ -133,6 +140,7 @@ try {
                 ['page' => 'campanas',    'href' => BASE_URL . '/admin/campanas.php',    'icon' => 'fa-flag',       'label' => 'Campañas'],
                 ['page' => 'promociones', 'href' => BASE_URL . '/admin/promociones.php', 'icon' => 'fa-percentage', 'label' => 'Promociones'],
             ]],
+            ['type' => 'link', 'page' => 'mensajes', 'href' => BASE_URL . '/admin/mensajes.php', 'icon' => 'fa-envelope-open-text', 'label' => 'Mensajes', 'badge' => $mensajesNuevosCount],
             ['type' => 'link', 'page' => 'postulantes', 'href' => BASE_URL . '/admin/postulantes.php', 'icon' => 'fa-briefcase', 'label' => 'Postulantes', 'badge' => $postulantesNuevasCount],
             ['type' => 'link', 'page' => 'reportes', 'href' => BASE_URL . '/admin/reportes.php', 'icon' => 'fa-chart-bar', 'label' => 'Reportes'],
             ['type' => 'group', 'icon' => 'fa-cog', 'label' => 'Configuración', 'children' => [

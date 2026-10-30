@@ -66,7 +66,7 @@ $envios = getDB()->query("SELECT * FROM empresas_envio WHERE activo = TRUE ORDER
                     <span id="total-val">S/ 0.00</span>
                 </div>
 
-                <a href="<?= BASE_URL ?>/checkout.php" id="checkout-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:20px">
+                <a href="<?= BASE_URL ?>/checkout" id="checkout-btn" class="btn btn-primary btn-full btn-lg" style="margin-top:20px">
                     <i class="fas fa-lock"></i> Finalizar compra
                 </a>
 

@@ -2,6 +2,15 @@
 // CARRITO — localStorage
 // ============================================================
 
+// URL amigable de un producto: /producto/{id}/{slug} (misma lógica que
+// urlProducto()/slugify() de config/app.php).
+function urlProducto(id, nombre) {
+    const slug = String(nombre || '').toLowerCase()
+        .normalize('NFD').replace(/[̀-ͯ]/g, '')
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    return window.BASE_URL + '/producto/' + id + (slug ? '/' + slug : '');
+}
+
 const Carrito = {
     KEY: 'sd_carrito',
 

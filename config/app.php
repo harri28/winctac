@@ -54,6 +54,52 @@ try {
     define('TIENDA_ID', 1);
 }
 
+// ── URLs amigables (SEO) ──
+// Las páginas públicas se enlazan sin ".php" (/nosotros, /catalogo) y los
+// productos como /producto/{id}/{slug}; el .htaccess (Apache local) y el
+// server block de nginx (producción) las reescriben al .php real.
+function slugify(string $texto): string {
+    $texto = mb_strtolower(trim($texto), 'UTF-8');
+    $texto = strtr($texto, ['á'=>'a','é'=>'e','í'=>'i','ó'=>'o','ú'=>'u','ü'=>'u','ñ'=>'n']);
+    $texto = preg_replace('/[^a-z0-9]+/', '-', $texto);
+    return trim($texto, '-');
+}
+
+function urlProducto(int $id, string $nombre = ''): string {
+    $slug = slugify($nombre);
+    return BASE_URL . '/producto/' . $id . ($slug !== '' ? '/' . $slug : '');
+}
+
+// Enlace wa.me con el número de Configuración → WhatsApp ('' si no hay número).
+// El número se guarda sin +51, así que se antepone el código de Perú cuando
+// tiene 9 dígitos.
+function whatsappUrl(array $cfg, string $mensaje = ''): string {
+    $num = preg_replace('/\D/', '', $cfg['whatsapp_numero'] ?? '');
+    if ($num === '') return '';
+    if (strlen($num) === 9) $num = '51' . $num;
+    return 'https://wa.me/' . $num . ($mensaje !== '' ? '?text=' . rawurlencode($mensaje) : '');
+}
+
+// Redes sociales configuradas en Configuración → Redes sociales, en el orden
+// en que se muestran (solo las que tienen URL).
+function redesSociales(array $cfg): array {
+    $redes = [
+        'facebook'  => ['Facebook',  'fa-facebook-f'],
+        'instagram' => ['Instagram', 'fa-instagram'],
+        'tiktok'    => ['TikTok',    'fa-tiktok'],
+        'youtube'   => ['YouTube',   'fa-youtube'],
+        'linkedin'  => ['LinkedIn',  'fa-linkedin-in'],
+    ];
+    $out = [];
+    foreach ($redes as $key => [$label, $icon]) {
+        $url = trim($cfg['red_' . $key] ?? '');
+        if ($url !== '' && preg_match('#^https?://#i', $url)) {
+            $out[] = ['label' => $label, 'icon' => $icon, 'url' => $url];
+        }
+    }
+    return $out;
+}
+
 // Helpers de formato
 function formatMoney(float $amount): string {
     return 'S/ ' . number_format($amount, 2);

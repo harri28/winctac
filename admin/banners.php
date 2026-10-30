@@ -312,7 +312,7 @@ $banners = $bannersStmt->fetchAll();
             const titInput = form.querySelector('.slot-titulo');
             if (!titInput.value) titInput.value = nom;
             // Pre-rellenar enlace
-            form.querySelector('.hid-enlace').value = window.BASE_URL + '/producto.php?id=' + id;
+            form.querySelector('.hid-enlace').value = window.BASE_URL + '/producto/' + id;
         } else {
             form.querySelector('.hid-img-url').value = '';
             form.querySelector('.hid-enlace').value  = '';

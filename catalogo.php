@@ -1,5 +1,6 @@
 <?php
 $pageTitle   = 'Catálogo';
+$metaDescription = 'Catálogo virtual: productos organizados por categoría, con precios y fotografías.';
 $currentPage = 'catalogo';
 require_once __DIR__ . '/includes/header.php';
 ?>
@@ -156,7 +157,7 @@ function cardHTML(p) {
         : `<div class="product-img-placeholder"><i class="fas fa-box"></i></div>`;
 
     return `
-    <div class="product-card" style="cursor:pointer" onclick="irAProducto(event,${p.id})">
+    <div class="product-card" style="cursor:pointer" onclick="irAProducto(event,${p.id},'${p.nombre.replace(/'/g,"\\'")}')">
         ${imgHTML}
         <div class="product-body">
             <div class="product-category">${p.categoria || ''}</div>
@@ -173,9 +174,9 @@ function cardHTML(p) {
     </div>`;
 }
 
-function irAProducto(e, id) {
+function irAProducto(e, id, nombre) {
     if (e.target.closest('.btn-add-cart')) return;
-    window.location.href = window.BASE_URL + '/producto.php?id=' + id;
+    window.location.href = urlProducto(id, nombre);
 }
 
 function agregarAlCarrito(id) {
