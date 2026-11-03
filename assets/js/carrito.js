@@ -11,6 +11,15 @@ function urlProducto(id, nombre) {
     return window.BASE_URL + '/producto/' + id + (slug ? '/' + slug : '');
 }
 
+// URL de WhatsApp con mensaje precargado para consultar por un producto.
+// Si no hay número configurado (window.WA_NUMERO vacío), igual se abre wa.me
+// y WhatsApp pedirá al usuario que elija el contacto.
+function waLinkProducto(nombre, id) {
+    const texto = 'Hola, me interesa consultar por el producto: ' + nombre
+        + '\n' + urlProducto(id, nombre);
+    return 'https://wa.me/' + (window.WA_NUMERO || '') + '?text=' + encodeURIComponent(texto);
+}
+
 const Carrito = {
     KEY: 'sd_carrito',
 
@@ -26,6 +35,13 @@ const Carrito = {
     },
 
     agregar(producto) {
+        // Modo catálogo: el carrito está deshabilitado — defensivo por si algún
+        // onclick viejo quedó colgado en la página; los cards ya no renderizan
+        // este botón cuando CARRITO_ACTIVO es false.
+        if (window.CARRITO_ACTIVO === false) {
+            showToast('Las compras online están desactivadas. Contáctanos por WhatsApp.', 'info');
+            return;
+        }
         const items = this.get();
         const idx = items.findIndex(i => i.id === producto.id);
         if (idx >= 0) {

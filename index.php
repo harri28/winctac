@@ -166,22 +166,50 @@ $redes  = redesSociales($cfg);
 <script>
 const NUEVOS_LIMITE = 4;
 
-async function cargarNuevosProductos() {
+// Retry con backoff (0ms, 1500ms, 4000ms) + timeout de 60s. Trae solo los
+// 4 más recientes (sort=nuevos server-side), ya no descarga el catálogo entero.
+async function cargarNuevosProductos(intento = 1) {
     const container = document.getElementById('nuevos-container');
+    container.innerHTML = '<div class="loading-overlay"><div class="spinner"></div> Cargando productos'
+        + (intento > 1 ? ` (reintento ${intento} de 3)` : '') + '...</div>';
+
+    const ctrl = new AbortController();
+    const timeoutId = setTimeout(() => ctrl.abort(), 60000);
+
+    const url = window.BASE_URL + '/api/index.php?action=productos&sort=nuevos&per_page=' + NUEVOS_LIMITE;
+
     try {
-        const res = await fetch(window.BASE_URL + '/api/index.php?action=productos');
+        const res = await fetch(url, { signal: ctrl.signal });
+        clearTimeout(timeoutId);
+        if (!res.ok) throw new Error('HTTP ' + res.status);
         const data = await res.json();
-        if (!data.success) throw new Error();
-        const nuevos = [...data.data]
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-            .slice(0, NUEVOS_LIMITE);
+        if (!data.success) throw new Error(data.error || 'respuesta sin success');
+        const nuevos = data.data || [];
         if (!nuevos.length) {
             container.innerHTML = '<div class="empty-state"><i class="fas fa-box-open"></i><h3>Sin productos</h3></div>';
             return;
         }
         container.innerHTML = nuevos.map(p => cardHTML(p)).join('');
     } catch (e) {
-        container.innerHTML = '<div class="empty-state"><i class="fas fa-exclamation-circle"></i><h3>Error al cargar productos</h3></div>';
+        clearTimeout(timeoutId);
+        console.error('[home] cargarNuevosProductos intento', intento, '-', e);
+        if (intento < 3) {
+            const espera = intento === 1 ? 1500 : 4000;
+            setTimeout(() => cargarNuevosProductos(intento + 1), espera);
+            return;
+        }
+        const motivo = e.name === 'AbortError'  ? 'La solicitud tardó demasiado (timeout de 60s).'
+                     : e.message.startsWith('HTTP') ? 'El servidor respondió con error (' + e.message + ').'
+                     : 'No se pudo procesar la respuesta del servidor.';
+        container.innerHTML = `
+            <div class="empty-state">
+                <i class="fas fa-exclamation-circle"></i>
+                <h3>No pudimos cargar los productos</h3>
+                <p>${motivo}</p>
+                <button class="btn btn-primary" onclick="cargarNuevosProductos(1)" style="margin-top:12px">
+                    <i class="fas fa-redo"></i> Reintentar
+                </button>
+            </div>`;
     }
 }
 
@@ -206,8 +234,24 @@ function cardHTML(p) {
         ? `<img class="product-img" src="${p.imagen}" alt="${p.nombre}" onerror="this.parentElement.innerHTML='<div class=\'product-img-placeholder\'><i class=\'fas fa-box\'></i></div>'">`
         : `<div class="product-img-placeholder"><i class="fas fa-box"></i></div>`;
 
+    const nombreEsc = p.nombre.replace(/'/g,"\\'");
+    // Si carrito.js llegó desactualizado (sin waLinkProducto), armamos el link
+    // aquí para que no se caiga todo el listado por una tarjeta.
+    const waHref = typeof waLinkProducto === 'function'
+        ? waLinkProducto(p.nombre, p.id)
+        : 'https://wa.me/' + (window.WA_NUMERO || '') + '?text='
+            + encodeURIComponent('Hola, me interesa consultar por el producto: ' + p.nombre);
+    const footerHTML = window.CARRITO_ACTIVO === false
+        ? `<a class="btn-add-wa" href="${waHref}" target="_blank" rel="noopener" onclick="event.stopPropagation()">
+               <i class="fab fa-whatsapp"></i> Consultar
+           </a>`
+        : `<button class="btn-add-cart" onclick="agregarAlCarrito(event,${p.id},'${nombreEsc}',${p.precio},'${(p.imagen||'').replace(/'/g,"\\'")}',${stock})"
+                   ${stock <= 0 ? 'disabled' : ''}>
+               <i class="fas fa-plus"></i> Agregar
+           </button>`;
+
     return `
-    <div class="product-card" style="cursor:pointer" onclick="irAProducto(event,${p.id},'${p.nombre.replace(/'/g,"\\'")}')">
+    <div class="product-card" style="cursor:pointer" onclick="irAProducto(event,${p.id},'${nombreEsc}')">
         ${imgHTML}
         <div class="product-body">
             <div class="product-category">${p.categoria || ''}</div>
@@ -216,16 +260,13 @@ function cardHTML(p) {
             ${stockLabel}
         </div>
         <div class="product-footer">
-            <button class="btn-add-cart" onclick="agregarAlCarrito(event,${p.id},'${p.nombre.replace(/'/g,"\\'")}',${p.precio},'${(p.imagen||'').replace(/'/g,"\\'")}',${stock})"
-                ${stock <= 0 ? 'disabled' : ''}>
-                <i class="fas fa-plus"></i> Agregar
-            </button>
+            ${footerHTML}
         </div>
     </div>`;
 }
 
 function irAProducto(e, id, nombre) {
-    if (e.target.closest('.btn-add-cart')) return;
+    if (e.target.closest('.btn-add-cart') || e.target.closest('.btn-add-wa')) return;
     window.location.href = urlProducto(id, nombre);
 }
 

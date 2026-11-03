@@ -154,26 +154,33 @@ require_once __DIR__ . '/includes/header.php';
 
             <div style="border-top:1px solid var(--border);padding-top:10px;display:flex;flex-direction:column;gap:8px">
 
-                <?php if ($stock > 0): ?>
-                <div style="display:flex;align-items:center;gap:8px">
-                    <span style="font-size:.82rem;color:var(--text-muted);font-weight:600">Cantidad:</span>
-                    <div class="qty-control">
-                        <button class="qty-btn" id="qty-minus">−</button>
-                        <span class="qty-num" id="qty-val">1</span>
-                        <button class="qty-btn" id="qty-plus">+</button>
+                <?php if (carritoActivo()): ?>
+                    <?php if ($stock > 0): ?>
+                    <div style="display:flex;align-items:center;gap:8px">
+                        <span style="font-size:.82rem;color:var(--text-muted);font-weight:600">Cantidad:</span>
+                        <div class="qty-control">
+                            <button class="qty-btn" id="qty-minus">−</button>
+                            <span class="qty-num" id="qty-val">1</span>
+                            <button class="qty-btn" id="qty-plus">+</button>
+                        </div>
                     </div>
-                </div>
-                <?php endif; ?>
+                    <?php endif; ?>
 
-                <div style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="btn btn-primary" id="btn-agregar" style="flex:1;min-width:160px" <?= $stock <= 0 ? 'disabled' : '' ?>>
-                        <i class="fas fa-shopping-cart"></i>
-                        <?= $stock <= 0 ? 'Sin stock' : 'Agregar al carrito' ?>
-                    </button>
-                    <a href="https://wa.me/?text=<?= $waText ?>" target="_blank" rel="noopener" class="btn-wa-share" style="flex:1;min-width:160px">
-                        <i class="fab fa-whatsapp"></i> Compartir
+                    <div style="display:flex;gap:8px;flex-wrap:wrap">
+                        <button class="btn btn-primary" id="btn-agregar" style="flex:1;min-width:160px" <?= $stock <= 0 ? 'disabled' : '' ?>>
+                            <i class="fas fa-shopping-cart"></i>
+                            <?= $stock <= 0 ? 'Sin stock' : 'Agregar al carrito' ?>
+                        </button>
+                        <a href="https://wa.me/?text=<?= $waText ?>" target="_blank" rel="noopener" class="btn-wa-share" style="flex:1;min-width:160px">
+                            <i class="fab fa-whatsapp"></i> Compartir
+                        </a>
+                    </div>
+                <?php else: /* Modo catálogo: sin agregar al carrito, botón único de consulta */ ?>
+                    <a href="<?= htmlspecialchars(waLinkProducto($nombre, $productUrl)) ?>" target="_blank" rel="noopener"
+                       class="btn btn-primary" style="background:#25D366;border-color:#25D366">
+                        <i class="fab fa-whatsapp"></i> Consultar por WhatsApp
                     </a>
-                </div>
+                <?php endif; ?>
 
                 <?php if ($codigo): ?>
                 <div style="font-size:.72rem;color:var(--text-light)">SKU: <?= htmlspecialchars($codigo) ?></div>

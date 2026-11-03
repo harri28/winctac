@@ -1,4 +1,13 @@
+
 <?php
+// Si el admin desactivó el carrito (modo catálogo electrónico), checkout no
+// debe ser accesible. Redirect antes de que header.php emita HTML.
+require_once __DIR__ . '/config/app.php';
+if (!carritoActivo()) {
+    setFlashToast('Las compras online están temporalmente desactivadas. Contáctanos por WhatsApp.', 'info');
+    header('Location: ' . BASE_URL . '/'); exit;
+}
+
 $pageTitle  = 'Finalizar Compra';
 $currentPage = 'checkout';
 require_once __DIR__ . '/includes/header.php';

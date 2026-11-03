@@ -148,8 +148,10 @@ try {
             ['type' => 'group', 'icon' => 'fa-cog', 'label' => 'Configuración', 'children' => [
                 ['page' => 'config',      'href' => BASE_URL . '/admin/config.php',      'icon' => 'fa-sliders-h',    'label' => 'Configuración'],
                 ['page' => 'facturacion', 'href' => BASE_URL . '/admin/facturacion.php', 'icon' => 'fa-file-invoice', 'label' => 'Facturación'],
-                ['page' => 'banners',     'href' => BASE_URL . '/admin/banners.php',     'icon' => 'fa-images',       'label' => 'Banners'],
-                ['page' => 'portal_web',  'href' => BASE_URL . '/admin/portal-web.php',  'icon' => 'fa-globe',        'label' => 'Portal Web'],
+                ['page' => 'banners',       'href' => BASE_URL . '/admin/banners.php',       'icon' => 'fa-images',           'label' => 'Banners'],
+                ['page' => 'banners_popup',     'href' => BASE_URL . '/admin/banners-popup.php',     'icon' => 'fa-window-maximize',      'label' => 'Banners pop-up'],
+                ['page' => 'banners_flotantes', 'href' => BASE_URL . '/admin/banners-flotantes.php', 'icon' => 'fa-envelope-open-text',   'label' => 'Banners flotantes'],
+                ['page' => 'portal_web',    'href' => BASE_URL . '/admin/portal-web.php',    'icon' => 'fa-globe',            'label' => 'Portal Web'],
             ]],
         ];
 

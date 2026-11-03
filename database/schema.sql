@@ -182,6 +182,25 @@ CREATE TABLE IF NOT EXISTS postulaciones (
     created_at TIMESTAMP DEFAULT NOW()
 );
 
+-- Campañas: códigos de descuento públicos con fecha (no requieren login ni
+-- cliente asociado, a diferencia de los cupones de puntos de fidelización)
+CREATE TABLE IF NOT EXISTS campanas (
+    id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+    nombre VARCHAR(150) NOT NULL,
+    codigo VARCHAR(30) NOT NULL,
+    tipo VARCHAR(10) NOT NULL DEFAULT 'porcentaje',
+    valor DECIMAL(10,2) NOT NULL,
+    compra_minima DECIMAL(10,2) DEFAULT 0,
+    limite_usos INTEGER DEFAULT NULL,
+    usos_actuales INTEGER NOT NULL DEFAULT 0,
+    fecha_inicio TIMESTAMP NOT NULL,
+    fecha_fin TIMESTAMP NOT NULL,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(tienda_id, codigo)
+);
+
 -- Configuración general (una fila por tienda; el id ES el id de la tienda)
 CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY REFERENCES tiendas(id),
@@ -227,6 +246,11 @@ CREATE TABLE IF NOT EXISTS config (
     -- apagado, sigue bloqueando la compra cuando stock=0, solo se ocultan
     -- los números exactos de "X disponibles"/"Últimas X unidades")
     mostrar_stock BOOLEAN DEFAULT TRUE,
+    -- Modo tienda: TRUE = e-commerce (carrito activo); FALSE = catálogo
+    -- electrónico (sin compra, cada producto muestra botón "Consultar por
+    -- WhatsApp"; carrito/checkout/confirmación redirigen al home; crear_pedido
+    -- en api/ responde 403 aunque alguien lo invoque directo)
+    carrito_activo BOOLEAN DEFAULT TRUE,
     updated_at TIMESTAMP DEFAULT NOW()
 );
 
@@ -255,6 +279,61 @@ CREATE TABLE IF NOT EXISTS promocion_productos (
     producto_id INTEGER NOT NULL REFERENCES productos(id) ON DELETE CASCADE,
     orden INTEGER DEFAULT 0,
     UNIQUE(promocion_id, producto_id)
+);
+
+-- Banners pop-up: modal al entrar a la web (distinto del slider de abajo).
+-- 1 banner activo por tienda se muestra como ventana centrada con imagen y
+-- un botón opcional con enlace. Se recuerda cerrado en localStorage por id,
+-- así que al publicar un banner nuevo (id distinto) vuelve a aparecer.
+CREATE TABLE IF NOT EXISTS banners_popup (
+    id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+    imagen_path TEXT NOT NULL,
+    enlace_url TEXT DEFAULT '',
+    enlace_label VARCHAR(50) DEFAULT '',
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- Banners flotantes: modal con imagen + formulario de captura de leads
+-- (nombre, email, etc.). A cambio de suscribirse, el visitante recibe el
+-- código de una campaña (fila de `campanas`) para usar en checkout. Si hay
+-- un banner flotante activo y un pop-up simple activo a la vez, el flotante
+-- tiene prioridad.
+CREATE TABLE IF NOT EXISTS banners_flotantes (
+    id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+    titulo VARCHAR(200) NOT NULL,
+    subtitulo VARCHAR(300) DEFAULT '',
+    imagen_path TEXT DEFAULT '',
+    color_fondo VARCHAR(7) DEFAULT '#fcd34d',
+    color_texto VARCHAR(7) DEFAULT '#1e293b',
+    campana_id INTEGER REFERENCES campanas(id) ON DELETE SET NULL,
+    boton_texto VARCHAR(50) DEFAULT 'Enviar',
+    mensaje_exito VARCHAR(300) DEFAULT '¡Gracias por suscribirte! Usa este código en tu primera compra:',
+    mostrar_nombre BOOLEAN DEFAULT TRUE,
+    mostrar_apellido BOOLEAN DEFAULT TRUE,
+    mostrar_celular BOOLEAN DEFAULT FALSE,
+    mostrar_genero BOOLEAN DEFAULT FALSE,
+    mostrar_cumpleanos BOOLEAN DEFAULT FALSE,
+    activo BOOLEAN DEFAULT TRUE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS banners_flotantes_leads (
+    id SERIAL PRIMARY KEY,
+    tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+    banner_id INTEGER REFERENCES banners_flotantes(id) ON DELETE SET NULL,
+    nombre VARCHAR(100) DEFAULT '',
+    apellido VARCHAR(100) DEFAULT '',
+    email VARCHAR(150) NOT NULL,
+    celular VARCHAR(20) DEFAULT '',
+    genero VARCHAR(20) DEFAULT '',
+    cumpleanos DATE DEFAULT NULL,
+    codigo_entregado VARCHAR(30) DEFAULT '',
+    ip VARCHAR(45) DEFAULT '',
+    created_at TIMESTAMP DEFAULT NOW(),
+    UNIQUE(tienda_id, email)
 );
 
 -- Banners del slider de inicio (por tienda)

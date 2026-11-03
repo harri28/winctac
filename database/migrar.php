@@ -253,9 +253,31 @@ $migraciones = [
     // ── Mostrar/ocultar cantidades exactas de stock en la tienda pública ──
     'config_mostrar_stock' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS mostrar_stock BOOLEAN DEFAULT TRUE",
 
+    // ── Modo tienda: TRUE = e-commerce (carrito activo); FALSE = catálogo electrónico (sin compra, botón "Consultar por WhatsApp") ──
+    'config_carrito_activo' => "ALTER TABLE config ADD COLUMN IF NOT EXISTS carrito_activo BOOLEAN DEFAULT TRUE",
+
     // ── Ampliar % de costeo: con costo casi cero el margen puede dispararse a millones ──
     'productos_minimo_porcentaje_widen' => "ALTER TABLE productos ALTER COLUMN minimo_porcentaje TYPE DECIMAL(12,2)",
     'productos_lista_porcentaje_widen'  => "ALTER TABLE productos ALTER COLUMN lista_porcentaje TYPE DECIMAL(12,2)",
+
+    // ── Campañas: códigos de descuento públicos con fecha (a diferencia de los
+    // cupones de puntos, no requieren login ni cliente asociado) ──
+    'campanas_table' => "CREATE TABLE IF NOT EXISTS campanas (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        nombre VARCHAR(150) NOT NULL,
+        codigo VARCHAR(30) NOT NULL,
+        tipo VARCHAR(10) NOT NULL DEFAULT 'porcentaje',
+        valor DECIMAL(10,2) NOT NULL,
+        compra_minima DECIMAL(10,2) DEFAULT 0,
+        limite_usos INTEGER DEFAULT NULL,
+        usos_actuales INTEGER NOT NULL DEFAULT 0,
+        fecha_inicio TIMESTAMP NOT NULL,
+        fecha_fin TIMESTAMP NOT NULL,
+        activo BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tienda_id, codigo)
+    )",
 
     // ── Redes sociales de la tienda (header/footer/contacto) ──
     'config_red_facebook'  => "ALTER TABLE config ADD COLUMN IF NOT EXISTS red_facebook VARCHAR(300) DEFAULT ''",
@@ -294,6 +316,74 @@ $migraciones = [
         created_at TIMESTAMP DEFAULT NOW()
     )",
     'productos_tienda_codigo_idx' => "CREATE INDEX IF NOT EXISTS productos_tienda_codigo_idx ON productos (tienda_id, codigo)",
+
+    // ── Banners pop-up: modal al ingresar a la web (distinto del slider del
+    // home, que vive en la tabla `banners`). Pensado para 1 banner activo por
+    // tienda; se cierra con la X y se recuerda cerrado en el navegador por
+    // banner.id, así que al publicar uno nuevo vuelve a aparecer.
+    'banners_popup_table' => "CREATE TABLE IF NOT EXISTS banners_popup (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        imagen_path TEXT NOT NULL,
+        enlace_url TEXT DEFAULT '',
+        enlace_label VARCHAR(50) DEFAULT '',
+        activo BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+    )",
+
+    // ── Banners flotantes: modal con imagen + formulario de captura de leads.
+    // El visitante llena sus datos y a cambio recibe el código de un cupón
+    // (una fila de `campanas` previamente creada por el admin). Se muestra
+    // una sola vez por banner.id vía localStorage. Si hay un banner flotante
+    // activo y un pop-up activo a la vez, el flotante tiene prioridad.
+    'banners_flotantes_table' => "CREATE TABLE IF NOT EXISTS banners_flotantes (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        titulo VARCHAR(200) NOT NULL,
+        subtitulo VARCHAR(300) DEFAULT '',
+        imagen_path TEXT DEFAULT '',
+        color_fondo VARCHAR(7) DEFAULT '#fcd34d',
+        color_texto VARCHAR(7) DEFAULT '#1e293b',
+        -- Campaña opcional cuyo código se entrega al suscriptor. Si es NULL,
+        -- el modal solo muestra 'Gracias por suscribirte' sin código.
+        campana_id INTEGER REFERENCES campanas(id) ON DELETE SET NULL,
+        boton_texto VARCHAR(50) DEFAULT 'Enviar',
+        mensaje_exito VARCHAR(300) DEFAULT '¡Gracias por suscribirte! Usa este código en tu primera compra:',
+        -- Campos opcionales (email siempre va, es la clave anti-duplicados)
+        mostrar_nombre BOOLEAN DEFAULT TRUE,
+        mostrar_apellido BOOLEAN DEFAULT TRUE,
+        mostrar_celular BOOLEAN DEFAULT FALSE,
+        mostrar_genero BOOLEAN DEFAULT FALSE,
+        mostrar_cumpleanos BOOLEAN DEFAULT FALSE,
+        activo BOOLEAN DEFAULT TRUE,
+        created_at TIMESTAMP DEFAULT NOW()
+    )",
+
+    // ── Leads capturados por banner flotante. Un email solo puede
+    // suscribirse una vez por tienda (si lo intenta otra vez le devolvemos
+    // el código original, no un error, para no frustrar al visitante).
+    'banners_flotantes_leads_table' => "CREATE TABLE IF NOT EXISTS banners_flotantes_leads (
+        id SERIAL PRIMARY KEY,
+        tienda_id INTEGER NOT NULL REFERENCES tiendas(id),
+        banner_id INTEGER REFERENCES banners_flotantes(id) ON DELETE SET NULL,
+        nombre VARCHAR(100) DEFAULT '',
+        apellido VARCHAR(100) DEFAULT '',
+        email VARCHAR(150) NOT NULL,
+        celular VARCHAR(20) DEFAULT '',
+        genero VARCHAR(20) DEFAULT '',
+        cumpleanos DATE DEFAULT NULL,
+        codigo_entregado VARCHAR(30) DEFAULT '',
+        ip VARCHAR(45) DEFAULT '',
+        created_at TIMESTAMP DEFAULT NOW(),
+        UNIQUE(tienda_id, email)
+    )",
+
+    // Índices para paginación/filtrado del catálogo público (api/index.php action=productos):
+    //  - lista por tienda ordenada por nombre
+    //  - filtro por categoría dentro de una tienda
+    'productos_tienda_activo_nombre_idx'   => "CREATE INDEX IF NOT EXISTS productos_tienda_activo_nombre_idx   ON productos (tienda_id, activo, nombre)",
+    'productos_tienda_categoria_idx'       => "CREATE INDEX IF NOT EXISTS productos_tienda_categoria_idx       ON productos (tienda_id, categoria_id) WHERE activo = TRUE",
+    'productos_tienda_created_at_idx'      => "CREATE INDEX IF NOT EXISTS productos_tienda_created_at_idx      ON productos (tienda_id, created_at DESC) WHERE activo = TRUE",
 
     // ── Fidelización: compras de la tienda física / ERP que acumulan puntos ──
     // estado: 'otorgado' (puntos acreditados), 'pendiente' (el DNI aún no está

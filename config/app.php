@@ -179,6 +179,30 @@ function brandColorStyleTag(array $cfg): string {
     return "<style>:root{--primary:$base;--primary-dark:$dark;--primary-light:$light;--primary-bg:$bg;}</style>";
 }
 
+// Modo tienda: cuando carrito_activo = FALSE, es sitio catálogo (sin compra online),
+// cada producto muestra botón "Consultar por WhatsApp" en vez de "Agregar al carrito";
+// carrito/checkout/confirmación redirigen al home; api/crear_pedido responde 403.
+function carritoActivo(): bool {
+    $cfg = getShopConfig();
+    return !array_key_exists('carrito_activo', $cfg) || !empty($cfg['carrito_activo']);
+}
+
+// URL de WhatsApp con mensaje precargado consultando por un producto.
+// Si no hay número configurado, se abre wa.me sin destino (prompt del contacto).
+function waLinkProducto(string $nombre, ?string $url = null): string {
+    $cfg   = getShopConfig();
+    $num   = preg_replace('/\D/', '', $cfg['whatsapp_numero'] ?? '');
+    $texto = 'Hola, me interesa consultar por el producto: ' . $nombre;
+    if ($url) $texto .= "\n" . $url;
+    return 'https://wa.me/' . $num . '?text=' . rawurlencode($texto);
+}
+
+// Flash toast: mensaje efímero que se muestra una sola vez en la próxima página
+// (lo lee includes/header.php y lo pinta como toast). Útil para redirects.
+function setFlashToast(string $mensaje, string $tipo = ''): void {
+    $_SESSION['flash_toast'] = ['msg' => $mensaje, 'tipo' => $tipo];
+}
+
 // Config de la tienda cacheada
 function getShopConfig(): array {
     static $cfg = null;

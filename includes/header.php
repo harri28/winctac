@@ -60,11 +60,13 @@ $navItems[] = ['contacto',             BASE_URL . '/contacto',             'Cont
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=38">
+    <link rel="stylesheet" href="<?= BASE_URL ?>/assets/css/style.css?v=<?= filemtime(__DIR__ . '/../assets/css/style.css') ?>">
     <?= brandColorStyleTag($cfg) ?>
     <script>
         window.BASE_URL = "<?= BASE_URL ?>";
         window.MOSTRAR_STOCK = <?= !empty($cfg['mostrar_stock']) ? 'true' : 'false' ?>;
+        window.CARRITO_ACTIVO = <?= carritoActivo() ? 'true' : 'false' ?>;
+        window.WA_NUMERO = "<?= htmlspecialchars(preg_replace('/\D/', '', $cfg['whatsapp_numero'] ?? ''), ENT_QUOTES) ?>";
     </script>
     <?php if ($ogData['description'] !== ''): ?>
     <meta name="description" content="<?= htmlspecialchars($ogData['description']) ?>">
@@ -96,6 +98,18 @@ $navItems[] = ['contacto',             BASE_URL . '/contacto',             'Cont
 
 <?php if (!empty($cfg['anuncio_activo']) && !empty($cfg['anuncio_texto'])): ?>
 <div class="top-announcement-bar"><?= htmlspecialchars($cfg['anuncio_texto']) ?></div>
+<?php endif; ?>
+
+<?php if (!empty($_SESSION['flash_toast'])):
+    $flash = $_SESSION['flash_toast'];
+    unset($_SESSION['flash_toast']); ?>
+<script>
+window.addEventListener('DOMContentLoaded', () => {
+    if (typeof showToast === 'function') {
+        showToast(<?= json_encode($flash['msg']) ?>, <?= json_encode($flash['tipo'] ?? '') ?>);
+    }
+});
+</script>
 <?php endif; ?>
 
 <header class="site-header">
@@ -146,10 +160,12 @@ $navItems[] = ['contacto',             BASE_URL . '/contacto',             'Cont
                 </a>
             <?php endif; ?>
 
+            <?php if (carritoActivo()): ?>
             <a href="<?= BASE_URL ?>/carrito" class="cart-btn" title="Carrito" aria-label="Carrito">
                 <i class="fas fa-shopping-cart"></i>
                 <span class="cart-badge" id="cart-badge">0</span>
             </a>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -227,4 +243,4 @@ $navItems[] = ['contacto',             BASE_URL . '/contacto',             'Cont
     });
 })();
 </script>
-<script src="<?= BASE_URL ?>/assets/js/carrito.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/carrito.js?v=<?= filemtime(__DIR__ . '/../assets/js/carrito.js') ?>"></script>

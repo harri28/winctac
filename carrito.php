@@ -1,4 +1,13 @@
 <?php
+// Si el admin desactivó el carrito (modo catálogo electrónico), esta página
+// no debe ser accesible. El redirect va ANTES de includes/header.php porque
+// ese ya emite HTML y rompería header('Location: ...').
+require_once __DIR__ . '/config/app.php';
+if (!carritoActivo()) {
+    setFlashToast('Las compras online están temporalmente desactivadas. Contáctanos por WhatsApp.', 'info');
+    header('Location: ' . BASE_URL . '/'); exit;
+}
+
 $pageTitle  = 'Mi Carrito';
 $currentPage = 'carrito';
 require_once __DIR__ . '/includes/header.php';
