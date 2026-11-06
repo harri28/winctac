@@ -439,11 +439,45 @@ function recalcularPrecio() {
 const MAX_EXTRA = 4;
 let extraSlots = [];
 let eliminarImagenesIds = [];
+let eliminarImagenPrincipal = false;
 
 function resetExtraSlots() {
     extraSlots = [];
     eliminarImagenesIds = [];
     renderExtraGallery();
+}
+
+function setMainPreview(src) {
+    const preview = document.getElementById('modal-img-preview');
+    preview.style.display = 'flex';
+    preview.style.position = 'relative';
+    preview.innerHTML = '';
+    const img = document.createElement('img');
+    img.src = src;
+    img.style.cssText = 'width:100%;height:100%;object-fit:contain;padding:6px';
+    preview.appendChild(img);
+    const btnX = document.createElement('span');
+    btnX.innerHTML = '&times;';
+    btnX.title = 'Quitar imagen';
+    btnX.style.cssText = 'position:absolute;top:2px;right:2px;width:18px;height:18px;background:rgba(0,0,0,.6);color:#fff;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:.8rem;cursor:pointer;z-index:2';
+    btnX.onclick = quitarImagenPrincipal;
+    preview.appendChild(btnX);
+}
+
+function clearMainPreview() {
+    const preview = document.getElementById('modal-img-preview');
+    preview.style.display = 'none';
+    preview.innerHTML = '';
+}
+
+function quitarImagenPrincipal(ev) {
+    if (ev) ev.stopPropagation();
+    // Solo marca el borrado en servidor si hay imagen YA guardada; si solo
+    // habia un preview local (archivo recien elegido sin guardar), basta con
+    // limpiar el input.
+    if (modalImagenActual) eliminarImagenPrincipal = true;
+    document.getElementById('f-imagen').value = '';
+    clearMainPreview();
 }
 
 // Pegar una imagen copiada (ej. de Google) directamente con Ctrl+V, sin tener
@@ -628,9 +662,8 @@ function abrirNuevo() {
     document.getElementById('f-descripcion').value = '';
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-activo').checked = true;
-    const previewNuevo = document.getElementById('modal-img-preview');
-    previewNuevo.innerHTML = '';
-    previewNuevo.style.display = 'none';
+    clearMainPreview();
+    eliminarImagenPrincipal = false;
     document.getElementById('modal-msg').style.display = 'none';
     document.getElementById('qr-section').style.display = 'none';
     tagsActuales = [];
@@ -662,13 +695,11 @@ function abrirEditar(p) {
     document.getElementById('f-activo').checked = p.activo === true;
     document.getElementById('modal-msg').style.display = 'none';
 
-    const preview = document.getElementById('modal-img-preview');
+    eliminarImagenPrincipal = false;
     if (modalImagenActual) {
-        preview.style.display = 'flex';
-        preview.innerHTML = `<img src="${window.BASE_URL}/uploads/productos/${modalImagenActual}" style="width:100%;height:100%;object-fit:contain;padding:6px">`;
+        setMainPreview(`${window.BASE_URL}/uploads/productos/${modalImagenActual}`);
     } else {
-        preview.style.display = 'none';
-        preview.innerHTML = '';
+        clearMainPreview();
     }
 
     try { tagsActuales = JSON.parse(p.etiquetas || '[]'); } catch (e) { tagsActuales = []; }
@@ -797,12 +828,11 @@ function cerrarModal() {
 
 function previewImagen(input) {
     if (!input.files[0]) return;
+    // Nuevo archivo elegido: si venias de haber hecho click en la X, se
+    // cancela ese borrado (vas a reemplazar, no eliminar).
+    eliminarImagenPrincipal = false;
     const reader = new FileReader();
-    reader.onload = e => {
-        const preview = document.getElementById('modal-img-preview');
-        preview.style.display = 'flex';
-        preview.innerHTML = `<img src="${e.target.result}" style="width:100%;height:100%;object-fit:contain;padding:6px">`;
-    };
+    reader.onload = e => setMainPreview(e.target.result);
     reader.readAsDataURL(input.files[0]);
 }
 
@@ -834,6 +864,7 @@ async function guardarProducto() {
     form.append('activo', document.getElementById('f-activo').checked ? '1' : '0');
     const imgFile = document.getElementById('f-imagen').files[0];
     if (imgFile) form.append('imagen', imgFile);
+    if (eliminarImagenPrincipal && !imgFile) form.append('eliminar_imagen_principal', '1');
 
     extraSlots.forEach((data, idx) => {
         if (data && data.file) form.append('imagen_extra_' + (idx + 1), data.file);

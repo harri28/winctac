@@ -13,15 +13,19 @@ if (empty($_SESSION['admin_id'])) {
 $pdo = getDB();
 
 // ── Alternar activo ────────────────────────────────────────────────────────
-if ($_GET['toggle'] ?? '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrfTokenValido($_POST['csrf_token'] ?? null)) {
+    http_response_code(403);
+    exit('Solicitud no válida.');
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['toggle'] ?? '')) {
     $pdo->prepare('UPDATE banners_flotantes SET activo = NOT activo WHERE id = ? AND tienda_id = ?')
-        ->execute([intval($_GET['toggle']), TIENDA_ID]);
+        ->execute([intval($_POST['toggle']), TIENDA_ID]);
     header('Location: ' . BASE_URL . '/admin/banners-flotantes.php?ok=1'); exit;
 }
 
 // ── Eliminar banner ────────────────────────────────────────────────────────
-if ($_GET['del'] ?? '') {
-    $delId = intval($_GET['del']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['del'] ?? '')) {
+    $delId = intval($_POST['del']);
     $img = $pdo->prepare('SELECT imagen_path FROM banners_flotantes WHERE id = ? AND tienda_id = ?');
     $img->execute([$delId, TIENDA_ID]);
     $fname = $img->fetchColumn();
@@ -149,6 +153,14 @@ $leads->execute([TIENDA_ID]);
 $leads = $leads->fetchAll();
 
 $totalLeads = (int) $pdo->query('SELECT COUNT(*) FROM banners_flotantes_leads WHERE tienda_id = ' . TIENDA_ID)->fetchColumn();
+
+// Modo edición: si viene ?edit=<id>, precarga el form con el banner existente.
+$editBanner = null;
+if ($_GET['edit'] ?? '') {
+    $e = $pdo->prepare('SELECT * FROM banners_flotantes WHERE id = ? AND tienda_id = ?');
+    $e->execute([intval($_GET['edit']), TIENDA_ID]);
+    $editBanner = $e->fetch() ?: null;
+}
 ?>
 
 <div class="admin-topbar">
@@ -225,6 +237,9 @@ $totalLeads = (int) $pdo->query('SELECT COUNT(*) FROM banners_flotantes_leads WH
                     <?php endif; ?>
                 </td>
                 <td style="white-space:nowrap">
+                    <a href="?edit=<?= $b['id'] ?>#form-banner" class="btn btn-secondary" style="padding:4px 10px;font-size:.78rem" title="Editar">
+                        <i class="fas fa-pencil-alt"></i>
+                    </a>
                     <a href="?toggle=<?= $b['id'] ?>" class="btn btn-secondary" style="padding:4px 10px;font-size:.78rem" title="<?= $b['activo'] ? 'Desactivar' : 'Activar' ?>">
                         <i class="fas fa-<?= $b['activo'] ? 'eye-slash' : 'eye' ?>"></i>
                     </a>
@@ -240,36 +255,54 @@ $totalLeads = (int) $pdo->query('SELECT COUNT(*) FROM banners_flotantes_leads WH
 </div>
 
 <!-- Formulario crear/editar -->
-<div class="card" style="margin-bottom:20px">
-    <div class="card-title"><i class="fas fa-plus-circle"></i> Crear nuevo banner flotante</div>
+<div class="card" style="margin-bottom:20px" id="form-banner">
+    <div class="card-title">
+        <?php if ($editBanner): ?>
+            <i class="fas fa-pencil-alt"></i> Editando banner #<?= (int) $editBanner['id'] ?>
+            &nbsp;<a href="<?= BASE_URL ?>/admin/banners-flotantes.php" style="font-size:.78rem;color:var(--text-muted);font-weight:400">(cancelar edición)</a>
+        <?php else: ?>
+            <i class="fas fa-plus-circle"></i> Crear nuevo banner flotante
+        <?php endif; ?>
+    </div>
 
     <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:16px">
-        <input type="hidden" name="banner_id" value="0">
+        <input type="hidden" name="banner_id" value="<?= $editBanner ? (int) $editBanner['id'] : 0 ?>">
 
         <div class="form-group">
             <label class="form-label">Título <span style="color:var(--danger)">*</span></label>
-            <input type="text" name="titulo" class="form-control" placeholder="Suscríbete y obtén 10% de descuento" required maxlength="200">
+            <input type="text" name="titulo" class="form-control" placeholder="Suscríbete y obtén 10% de descuento" required maxlength="200" value="<?= htmlspecialchars($editBanner['titulo'] ?? '') ?>">
         </div>
 
         <div class="form-group">
             <label class="form-label">Subtítulo</label>
-            <input type="text" name="subtitulo" class="form-control" placeholder="En tu primera compra" maxlength="300">
+            <input type="text" name="subtitulo" class="form-control" placeholder="En tu primera compra" maxlength="300" value="<?= htmlspecialchars($editBanner['subtitulo'] ?? '') ?>">
         </div>
 
         <div class="form-group">
-            <label class="form-label">Imagen del banner (lado izquierdo)</label>
+            <label class="form-label">Imagen del banner (lado derecho)</label>
+            <?php if ($editBanner && $editBanner['imagen_path'] && file_exists(UPLOADS_PATH . '/' . $editBanner['imagen_path'])): ?>
+            <div style="margin-bottom:8px">
+                <img src="<?= UPLOADS_URL ?>/<?= htmlspecialchars($editBanner['imagen_path']) ?>" style="max-height:120px;border-radius:6px;background:#f1f5f9;border:1px solid var(--border)">
+            </div>
+            <?php endif; ?>
             <input type="file" name="imagen" class="form-control" accept="image/*">
-            <div class="form-hint">Recomendado: imagen vertical ~400x600 px. En móvil se oculta.</div>
+            <div class="form-hint">
+                <?php if ($editBanner): ?>
+                    <strong>Deja este campo vacío para conservar la imagen actual.</strong> Sube uno nuevo solo si quieres reemplazarla.
+                <?php else: ?>
+                    Recomendado: imagen vertical ~400x600 px. En móvil se oculta.
+                <?php endif; ?>
+            </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
             <div class="form-group">
                 <label class="form-label">Color de fondo</label>
-                <input type="color" name="color_fondo" value="#fcd34d" style="width:70px;height:38px;padding:2px;cursor:pointer">
+                <input type="color" name="color_fondo" value="<?= htmlspecialchars($editBanner['color_fondo'] ?? '#fcd34d') ?>" style="width:70px;height:38px;padding:2px;cursor:pointer">
             </div>
             <div class="form-group">
                 <label class="form-label">Color del texto</label>
-                <input type="color" name="color_texto" value="#1e293b" style="width:70px;height:38px;padding:2px;cursor:pointer">
+                <input type="color" name="color_texto" value="<?= htmlspecialchars($editBanner['color_texto'] ?? '#1e293b') ?>" style="width:70px;height:38px;padding:2px;cursor:pointer">
             </div>
         </div>
 
@@ -278,7 +311,9 @@ $totalLeads = (int) $pdo->query('SELECT COUNT(*) FROM banners_flotantes_leads WH
             <select name="campana_id" class="form-control">
                 <option value="">— Ninguno (solo guardar el lead) —</option>
                 <?php foreach ($campanas as $c): ?>
-                <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['codigo']) ?> — <?= htmlspecialchars($c['nombre']) ?></option>
+                <option value="<?= $c['id'] ?>" <?= ($editBanner && (int)$editBanner['campana_id'] === (int)$c['id']) ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($c['codigo']) ?> — <?= htmlspecialchars($c['nombre']) ?>
+                </option>
                 <?php endforeach; ?>
             </select>
             <div class="form-hint">Si eliges un cupón, al suscribirse el visitante lo verá en pantalla para usar en el checkout.</div>
@@ -287,11 +322,11 @@ $totalLeads = (int) $pdo->query('SELECT COUNT(*) FROM banners_flotantes_leads WH
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px">
             <div class="form-group">
                 <label class="form-label">Texto del botón</label>
-                <input type="text" name="boton_texto" class="form-control" value="Enviar" maxlength="50">
+                <input type="text" name="boton_texto" class="form-control" value="<?= htmlspecialchars($editBanner['boton_texto'] ?? 'Enviar') ?>" maxlength="50">
             </div>
             <div class="form-group">
                 <label class="form-label">Mensaje de éxito</label>
-                <input type="text" name="mensaje_exito" class="form-control" value="¡Gracias por suscribirte! Usa este código en tu primera compra:" maxlength="300">
+                <input type="text" name="mensaje_exito" class="form-control" value="<?= htmlspecialchars($editBanner['mensaje_exito'] ?? '¡Gracias por suscribirte! Usa este código en tu primera compra:') ?>" maxlength="300">
             </div>
         </div>
 
@@ -310,14 +345,17 @@ $totalLeads = (int) $pdo->query('SELECT COUNT(*) FROM banners_flotantes_leads WH
         </div>
 
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="activo" value="1" checked>
+            <input type="checkbox" name="activo" value="1" <?= (!$editBanner || !empty($editBanner['activo'])) ? 'checked' : '' ?>>
             <strong>Mostrar activo</strong> &nbsp;<span style="color:var(--text-muted);font-size:.85rem">— si tienes otro flotante activo, apágalo antes</span>
         </label>
 
         <div>
             <button type="submit" name="save_banner" class="btn btn-primary">
-                <i class="fas fa-save"></i> Crear banner flotante
+                <i class="fas fa-save"></i> <?= $editBanner ? 'Guardar cambios' : 'Crear banner flotante' ?>
             </button>
+            <?php if ($editBanner): ?>
+            <a href="<?= BASE_URL ?>/admin/banners-flotantes.php" class="btn btn-secondary" style="margin-left:6px">Cancelar</a>
+            <?php endif; ?>
         </div>
     </form>
 </div>

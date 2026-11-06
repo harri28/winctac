@@ -103,6 +103,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_popup'])) {
 $banners = $pdo->prepare('SELECT * FROM banners_popup WHERE tienda_id = ? ORDER BY activo DESC, created_at DESC');
 $banners->execute([TIENDA_ID]);
 $banners = $banners->fetchAll();
+
+// Modo edición: si viene ?edit=<id>, carga el banner y precarga el form.
+// Si no, el form queda en modo "Crear nuevo".
+$editBanner = null;
+if ($_GET['edit'] ?? '') {
+    $e = $pdo->prepare('SELECT * FROM banners_popup WHERE id = ? AND tienda_id = ?');
+    $e->execute([intval($_GET['edit']), TIENDA_ID]);
+    $editBanner = $e->fetch() ?: null;
+}
 ?>
 
 <div class="admin-topbar">
@@ -175,6 +184,9 @@ $banners = $banners->fetchAll();
                     <?= date('d/m/Y', strtotime($b['created_at'])) ?>
                 </td>
                 <td style="white-space:nowrap">
+                    <a href="?edit=<?= $b['id'] ?>#form-banner" class="btn btn-secondary" style="padding:4px 10px;font-size:.78rem" title="Editar">
+                        <i class="fas fa-pencil-alt"></i>
+                    </a>
                     <a href="?toggle=<?= $b['id'] ?>" class="btn btn-secondary" style="padding:4px 10px;font-size:.78rem" title="<?= $b['activo'] ? 'Desactivar' : 'Activar' ?>">
                         <i class="fas fa-<?= $b['activo'] ? 'eye-slash' : 'eye' ?>"></i>
                     </a>
@@ -189,44 +201,68 @@ $banners = $banners->fetchAll();
     <?php endif; ?>
 </div>
 
-<!-- Formulario crear nuevo -->
-<div class="card">
-    <div class="card-title"><i class="fas fa-plus-circle"></i> Crear nuevo banner pop-up</div>
+<!-- Formulario crear/editar -->
+<div class="card" id="form-banner">
+    <div class="card-title">
+        <?php if ($editBanner): ?>
+            <i class="fas fa-pencil-alt"></i> Editando banner #<?= (int) $editBanner['id'] ?>
+            &nbsp;<a href="<?= BASE_URL ?>/admin/banners-popup.php" style="font-size:.78rem;color:var(--text-muted);font-weight:400">(cancelar edición)</a>
+        <?php else: ?>
+            <i class="fas fa-plus-circle"></i> Crear nuevo banner pop-up
+        <?php endif; ?>
+    </div>
 
     <form method="POST" enctype="multipart/form-data" style="display:flex;flex-direction:column;gap:16px">
-        <input type="hidden" name="popup_id" value="0">
+        <input type="hidden" name="popup_id" value="<?= $editBanner ? (int) $editBanner['id'] : 0 ?>">
 
         <div class="form-group">
-            <label class="form-label">Imagen del banner <span style="color:var(--danger)">*</span></label>
-            <input type="file" name="imagen" class="form-control" accept="image/*" required>
+            <label class="form-label">
+                Imagen del banner
+                <?php if (!$editBanner): ?><span style="color:var(--danger)">*</span><?php endif; ?>
+            </label>
+            <?php if ($editBanner && $editBanner['imagen_path'] && file_exists(UPLOADS_PATH . '/' . $editBanner['imagen_path'])): ?>
+            <div style="margin-bottom:8px">
+                <img src="<?= UPLOADS_URL ?>/<?= htmlspecialchars($editBanner['imagen_path']) ?>" style="max-height:120px;border-radius:6px;background:#f1f5f9;border:1px solid var(--border)">
+            </div>
+            <?php endif; ?>
+            <!-- Sin "required" client-side: al editar, la imagen ya está en BD y no hay que re-subir;
+                 al crear nuevo, el handler PHP valida la obligatoriedad server-side y devuelve error claro. -->
+            <input type="file" name="imagen" class="form-control" accept="image/*">
             <div class="form-hint">
-                Recomendado: imagen horizontal rectangular, ~800x600 px, JPG o PNG. Se escala automáticamente al mostrarla.
-                Si incluyes el diseño completo (título y oferta en la propia imagen), no necesitas el botón.
+                <?php if ($editBanner): ?>
+                    <strong>Deja este campo vacío para conservar la imagen actual.</strong> Sube uno nuevo solo si quieres reemplazarlo.
+                <?php else: ?>
+                    Recomendado: imagen horizontal rectangular, ~800x600 px, JPG o PNG. Se escala automáticamente al mostrarla.
+                    Si incluyes el diseño completo (título y oferta en la propia imagen), no necesitas el botón.
+                <?php endif; ?>
             </div>
         </div>
 
         <div style="display:grid;grid-template-columns:1fr 2fr;gap:12px">
             <div class="form-group">
                 <label class="form-label">Texto del botón (opcional)</label>
-                <input type="text" name="enlace_label" class="form-control" placeholder="Ver catálogo" maxlength="50">
+                <input type="text" name="enlace_label" class="form-control" placeholder="Ver catálogo" maxlength="50" value="<?= htmlspecialchars($editBanner['enlace_label'] ?? '') ?>">
                 <div class="form-hint">Si no quieres botón, deja vacíos ambos campos.</div>
             </div>
             <div class="form-group">
                 <label class="form-label">URL del botón (opcional)</label>
-                <input type="url" name="enlace_url" class="form-control" placeholder="https://wintac.shop/catalogo o /catalogo">
+                <input type="url" name="enlace_url" class="form-control" placeholder="https://wintac.shop/catalogo o /catalogo" value="<?= htmlspecialchars($editBanner['enlace_url'] ?? '') ?>">
                 <div class="form-hint">URL absoluta (https://…) o relativa (/catalogo, /producto/123).</div>
             </div>
         </div>
 
         <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
-            <input type="checkbox" name="activo" value="1" checked>
+            <input type="checkbox" name="activo" value="1" <?= (!$editBanner || !empty($editBanner['activo'])) ? 'checked' : '' ?>>
             <strong>Mostrar activo</strong> &nbsp;<span style="color:var(--text-muted);font-size:.85rem">— si ya hay otro activo, apágalo antes para no mostrar los dos</span>
         </label>
 
         <div>
             <button type="submit" name="save_popup" class="btn btn-primary">
-                <i class="fas fa-save"></i> Crear banner pop-up
+                <i class="fas fa-save"></i> <?= $editBanner ? 'Guardar cambios' : 'Crear banner pop-up' ?>
             </button>
+            <?php if ($editBanner): ?>
+            <a href="<?= BASE_URL ?>/admin/banners-popup.php" class="btn btn-secondary" style="margin-left:6px">Cancelar</a>
+            <?php endif; ?>
         </div>
     </form>
 </div>

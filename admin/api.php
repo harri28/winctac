@@ -141,7 +141,10 @@ try {
             if ($precio < 0 || $stock < 0) { echo json_encode(['success' => false, 'error' => 'Precio y stock no pueden ser negativos']); break; }
 
             // Imagen (opcional)
-            $imagenPath = null; // null = no tocar la imagen actual
+            // $imagenPath === null  → no tocar la imagen actual
+            // $imagenPath === ''    → blanquearla y borrar el archivo viejo
+            // $imagenPath === 'xx'  → reemplazar por este nuevo archivo
+            $imagenPath = null;
             if (!empty($_FILES['imagen']['tmp_name'])) {
                 $ext = strtolower(pathinfo($_FILES['imagen']['name'], PATHINFO_EXTENSION));
                 if (!in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
@@ -154,6 +157,10 @@ try {
                     echo json_encode(['success' => false, 'error' => 'Error al guardar la imagen']); break;
                 }
                 $imagenPath = $fname;
+            } elseif (!empty($_POST['eliminar_imagen_principal'])) {
+                // La rama de UPDATE que sigue ya borra el archivo viejo del disco
+                // cuando $imagenPath !== null, asi que solo hace falta setearlo a ''.
+                $imagenPath = '';
             }
 
             if ($productoId) {
