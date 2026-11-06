@@ -3,14 +3,24 @@
 // CONEXIÓN PDO — BD selvadigital (PostgreSQL)
 // ============================================================
 
+// En dev local no hay pool de PHP-FPM que inyecte DB_* via `env[...]` como en
+// prod. Un `config/env.local.php` (gitignored) con putenv() cubre ese hueco
+// sin relajar la validación de abajo para producción.
+if (file_exists(__DIR__ . '/env.local.php')) {
+    require_once __DIR__ . '/env.local.php';
+}
+
 function getDB(): PDO {
     static $pdo = null;
     if ($pdo === null) {
-        $host = getenv('DB_HOST') ?: '127.0.0.1';
-        $port = getenv('DB_PORT') ?: '5432';
-        $name = getenv('DB_NAME') ?: 'selvadigital';
-        $user = getenv('DB_USER') ?: 'postgres';
-        $pass = getenv('DB_PASS') ?: '1234';
+        $host = getenv('DB_HOST');
+        $port = getenv('DB_PORT');
+        $name = getenv('DB_NAME');
+        $user = getenv('DB_USER');
+        $pass = getenv('DB_PASS');
+        if (!$host || !$port || !$name || !$user || $pass === false) {
+            throw new RuntimeException('Database connection environment is incomplete.');
+        }
         $pdo = new PDO(
             "pgsql:host=$host;port=$port;dbname=$name",
             $user,

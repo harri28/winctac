@@ -28,6 +28,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $c = $stmt->fetch();
         if ($c && password_verify($pass, $c['password_hash'])) {
             limpiarIntentos($pdo, $clave);
+            session_regenerate_id(true);
             loginCliente($c);
             header('Location: ' . redirectInterno($_GET['redirect'] ?? null));
             exit;

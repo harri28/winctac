@@ -5,6 +5,11 @@
 require_once __DIR__ . '/../../config/app.php';
 require_once __DIR__ . '/../../config/database.php';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrfTokenValido($_POST['csrf_token'] ?? null)) {
+    http_response_code(403);
+    exit('Solicitud no válida. Recarga la página e inténtalo de nuevo.');
+}
+
 function adminLogueado(): bool { return !empty($_SESSION['admin_id']); }
 function requireAdmin(): void {
     if (!adminLogueado()) {
@@ -77,6 +82,43 @@ try {
     </style>
 </head>
 <body>
+<script>
+window.ADMIN_CSRF_TOKEN = <?= json_encode(csrfToken()) ?>;
+const nativeAdminFetch = window.fetch.bind(window);
+window.fetch = function (input, init) {
+    init = init || {};
+    const url = new URL(typeof input === 'string' ? input : input.url, window.location.href);
+    if (url.origin === window.location.origin && url.pathname.endsWith('/admin/api.php') && (init.method || 'GET').toUpperCase() !== 'GET') {
+        const headers = new Headers(init.headers || (input instanceof Request ? input.headers : undefined));
+        headers.set('X-CSRF-Token', window.ADMIN_CSRF_TOKEN);
+        init.headers = headers;
+    }
+    return nativeAdminFetch(input, init);
+};
+document.addEventListener('submit', function (event) {
+    const form = event.target;
+    if (!(form instanceof HTMLFormElement) || form.method.toLowerCase() !== 'post' || form.elements.namedItem('csrf_token')) return;
+    const input = document.createElement('input');
+    input.type = 'hidden'; input.name = 'csrf_token'; input.value = window.ADMIN_CSRF_TOKEN;
+    form.appendChild(input);
+}, true);
+document.addEventListener('click', function (event) {
+    const link = event.target.closest('a[href]');
+    if (!link) return;
+    const target = new URL(link.href, window.location.href);
+    if (target.origin !== window.location.origin || target.pathname !== window.location.pathname) return;
+    const action = ['del', 'toggle', 'clear'].find(key => target.searchParams.has(key));
+    if (!action) return;
+    event.preventDefault();
+    const form = document.createElement('form');
+    form.method = 'POST'; form.action = target.pathname;
+    const input = document.createElement('input');
+    input.type = 'hidden'; input.name = action; input.value = target.searchParams.get(action); form.appendChild(input);
+    const token = document.createElement('input');
+    token.type = 'hidden'; token.name = 'csrf_token'; token.value = window.ADMIN_CSRF_TOKEN; form.appendChild(token);
+    document.body.appendChild(form); form.submit();
+}, true);
+</script>
 
 <div class="admin-layout">
 

@@ -49,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_campana'])) {
 }
 
 // Eliminar campaña
-if (!empty($_GET['del']) && is_numeric($_GET['del'])) {
-    $pdo->prepare('DELETE FROM campanas WHERE id = ? AND tienda_id = ?')->execute([intval($_GET['del']), TIENDA_ID]);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['del']) && is_numeric($_POST['del'])) {
+    $pdo->prepare('DELETE FROM campanas WHERE id = ? AND tienda_id = ?')->execute([intval($_POST['del']), TIENDA_ID]);
     $success = 'Campaña eliminada.';
 }
 

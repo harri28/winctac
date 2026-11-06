@@ -18,8 +18,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado'])) {
 }
 
 // Eliminar una postulación (y su CV en disco)
-if (!empty($_GET['del']) && is_numeric($_GET['del'])) {
-    $id  = intval($_GET['del']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['del']) && is_numeric($_POST['del'])) {
+    $id  = intval($_POST['del']);
     $row = $pdo->prepare('SELECT cv_path FROM postulaciones WHERE id = ? AND tienda_id = ?');
     $row->execute([$id, TIENDA_ID]);
     $cvPath = $row->fetchColumn();

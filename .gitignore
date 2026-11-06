@@ -19,6 +19,10 @@ apache_vhosts_header.txt
 .DS_Store
 Thumbs.db
 
+# Credenciales de BD de dev local (cada máquina tiene las suyas; en prod vienen
+# del pool PHP-FPM). database.php las carga si el archivo existe.
+/config/env.local.php
+
 # Personal/local Claude Code settings (not shared project config)
 .claude/settings.local.json
 

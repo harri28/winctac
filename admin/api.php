@@ -11,12 +11,20 @@ function adminLogueado(): bool { return !empty($_SESSION['admin_id']); }
 
 header('Content-Type: application/json; charset=utf-8');
 
+$action = $_GET['action'] ?? '';
+$readOnlyActions = ['detalle_pedido', 'imagenes_producto', 'etiquetas_sugeridas', 'detalle_cliente'];
+if (!in_array($action, $readOnlyActions, true)
+    && ($_SERVER['REQUEST_METHOD'] !== 'POST' || !csrfTokenValido($_SERVER['HTTP_X_CSRF_TOKEN'] ?? ($_POST['csrf_token'] ?? null)))) {
+    http_response_code(403);
+    echo json_encode(['success' => false, 'error' => 'Solicitud no válida.']);
+    exit;
+}
+
 if (!adminLogueado()) {
     echo json_encode(['success' => false, 'error' => 'No autorizado']);
     exit;
 }
 
-$action = $_GET['action'] ?? '';
 $pdo    = getDB();
 
 try {

@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $admin = $stmt->fetch();
         if ($admin && password_verify($pass, $admin['password_hash'])) {
             limpiarIntentos($pdo, $clave);
+            session_regenerate_id(true);
             $_SESSION['admin_id']     = $admin['id'];
             $_SESSION['admin_nombre'] = $admin['nombre'];
             header('Location: ' . BASE_URL . '/admin/index.php');

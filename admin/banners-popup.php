@@ -15,15 +15,19 @@ if (empty($_SESSION['admin_id'])) {
 $pdo = getDB();
 
 // ── Alternar activo/inactivo rápido ────────────────────────────────────────
-if ($_GET['toggle'] ?? '') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrfTokenValido($_POST['csrf_token'] ?? null)) {
+    http_response_code(403);
+    exit('Solicitud no válida.');
+}
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['toggle'] ?? '')) {
     $pdo->prepare('UPDATE banners_popup SET activo = NOT activo WHERE id = ? AND tienda_id = ?')
-        ->execute([intval($_GET['toggle']), TIENDA_ID]);
+        ->execute([intval($_POST['toggle']), TIENDA_ID]);
     header('Location: ' . BASE_URL . '/admin/banners-popup.php?ok=1'); exit;
 }
 
 // ── Eliminar ───────────────────────────────────────────────────────────────
-if ($_GET['del'] ?? '') {
-    $delId = intval($_GET['del']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['del'] ?? '')) {
+    $delId = intval($_POST['del']);
     $img = $pdo->prepare('SELECT imagen_path FROM banners_popup WHERE id = ? AND tienda_id = ?');
     $img->execute([$delId, TIENDA_ID]);
     $fname = $img->fetchColumn();

@@ -18,9 +18,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['cambiar_estado'])) {
 }
 
 // Eliminar un mensaje
-if (!empty($_GET['del']) && is_numeric($_GET['del'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['del']) && is_numeric($_POST['del'])) {
     $pdo->prepare('DELETE FROM mensajes_contacto WHERE id = ? AND tienda_id = ?')
-        ->execute([intval($_GET['del']), TIENDA_ID]);
+        ->execute([intval($_POST['del']), TIENDA_ID]);
     $success = 'Mensaje eliminado.';
 }
 

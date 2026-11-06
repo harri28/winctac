@@ -173,11 +173,15 @@ try {
                 break;
             }
             $body = json_decode(file_get_contents('php://input'), true);
+            if (!is_array($body)) {
+                echo json_encode(['success' => false, 'error' => 'Solicitud inválida.']);
+                break;
+            }
             $items           = $body['items'] ?? [];
             $metodoPago      = $body['metodo_pago'] ?? '';
-            $empresaEnvioId  = $body['empresa_envio_id'] ?: null;
-            $empresaEnvioNom = $body['empresa_envio_nombre'] ?? '';
-            $costoEnvio      = floatval($body['costo_envio'] ?? 0);
+            $empresaEnvioId  = null;
+            $empresaEnvioNom = '';
+            $costoEnvio      = 0.0;
             $direccion       = $body['direccion_entrega'] ?? '';
             $notas           = $body['notas'] ?? '';
             $tipoEntrega     = $body['tipo_entrega'] ?? 'delivery';
@@ -185,6 +189,30 @@ try {
             $clienteCelular  = trim($body['cliente_celular'] ?? '');
             $clienteDni      = trim($body['cliente_dni'] ?? '');
             $crearCuenta     = $body['crear_cuenta'] ?? null;
+
+            if (!in_array($tipoEntrega, ['delivery', 'recojo'], true)
+                || !in_array($metodoPago, ['billetera', 'pos', 'efectivo'], true)
+                || ($metodoPago === 'efectivo' && $tipoEntrega !== 'recojo')) {
+                echo json_encode(['success' => false, 'error' => 'Tipo de entrega o método de pago no válido.']);
+                break;
+            }
+            if ($tipoEntrega === 'delivery') {
+                $envioId = filter_var($body['empresa_envio_id'] ?? null, FILTER_VALIDATE_INT);
+                if (!$envioId || trim((string) $direccion) === '') {
+                    echo json_encode(['success' => false, 'error' => 'Selecciona una empresa de envío e ingresa la dirección de entrega.']);
+                    break;
+                }
+                $envioStmt = $pdo->prepare('SELECT id, nombre, precio FROM empresas_envio WHERE id = ? AND activo = TRUE');
+                $envioStmt->execute([$envioId]);
+                $envio = $envioStmt->fetch();
+                if (!$envio || (float) $envio['precio'] < 0) {
+                    echo json_encode(['success' => false, 'error' => 'La opción de envío seleccionada ya no está disponible.']);
+                    break;
+                }
+                $empresaEnvioId = (int) $envio['id'];
+                $empresaEnvioNom = $envio['nombre'];
+                $costoEnvio = (float) $envio['precio'];
+            }
 
             if (!$items) {
                 echo json_encode(['success' => false, 'error' => 'Carrito vacío']);

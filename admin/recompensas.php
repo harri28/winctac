@@ -43,8 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_recompensa'])) {
 }
 
 // Eliminar recompensa (no afecta cupones ya emitidos: quedan con su propio snapshot)
-if (!empty($_GET['del']) && is_numeric($_GET['del'])) {
-    $pdo->prepare('DELETE FROM puntos_recompensas WHERE id = ?')->execute([intval($_GET['del'])]);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['del']) && is_numeric($_POST['del'])) {
+    $pdo->prepare('DELETE FROM puntos_recompensas WHERE id = ?')->execute([intval($_POST['del'])]);
     header('Location: ' . BASE_URL . '/admin/recompensas.php?ok=1');
     exit;
 }

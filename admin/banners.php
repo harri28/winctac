@@ -88,15 +88,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['banner_id'])) {
 }
 
 // Limpiar slot
-if (!empty($_GET['clear']) && is_numeric($_GET['clear'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['clear']) && is_numeric($_POST['clear'])) {
     $row = $pdo->prepare('SELECT imagen_path FROM banners WHERE id = ? AND tienda_id = ?');
-    $row->execute([intval($_GET['clear']), TIENDA_ID]);
+    $row->execute([intval($_POST['clear']), TIENDA_ID]);
     $b = $row->fetch();
     if ($b && $b['imagen_path'] && file_exists(UPLOADS_PATH . '/' . $b['imagen_path'])) {
         @unlink(UPLOADS_PATH . '/' . $b['imagen_path']);
     }
     $pdo->prepare("UPDATE banners SET imagen_path=NULL, imagen_url=NULL, titulo='', subtitulo='', enlace='', producto_id=NULL WHERE id=? AND tienda_id=?")
-        ->execute([intval($_GET['clear']), TIENDA_ID]);
+        ->execute([intval($_POST['clear']), TIENDA_ID]);
     header('Location: ' . BASE_URL . '/admin/banners.php?ok=1'); exit;
 }
 

@@ -5,12 +5,16 @@
 // ============================================================
 require_once __DIR__ . '/../config/app.php';
 
-$host = getenv('DB_HOST') ?: '127.0.0.1';
-$port = getenv('DB_PORT') ?: '5432';
-$name = getenv('DB_NAME') ?: 'selvadigital';
+$host = getenv('DB_HOST');
+$port = getenv('DB_PORT');
+$name = getenv('DB_NAME');
 $dsn  = "pgsql:host=$host;port=$port;dbname=$name";
-$user = getenv('DB_USER') ?: 'postgres';
-$pass = getenv('DB_PASS') ?: '1234';
+$user = getenv('DB_USER');
+$pass = getenv('DB_PASS');
+if (!$host || !$port || !$name || !$user || $pass === false) {
+    http_response_code(500);
+    exit('Database connection environment is incomplete.');
+}
 
 echo '<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
 <title>Setup Selvadigital</title>

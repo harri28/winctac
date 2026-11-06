@@ -31,8 +31,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_categoria'])) {
 }
 
 // Eliminar categoría (bloqueado si tiene productos)
-if (!empty($_GET['del']) && is_numeric($_GET['del'])) {
-    $id = intval($_GET['del']);
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['del']) && is_numeric($_POST['del'])) {
+    $id = intval($_POST['del']);
     $total = $pdo->prepare('SELECT COUNT(*) FROM productos WHERE categoria_id = ? AND tienda_id = ?');
     $total->execute([$id, TIENDA_ID]);
     if ($total->fetchColumn() > 0) {
