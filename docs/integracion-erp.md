@@ -38,6 +38,12 @@ tabla `erp_sincronizaciones`.
 
 ## 1. Importación del listado del ERP
 
+> **Carga masiva de catálogo:** *Productos → Importar productos*
+> (`admin/importar-productos.php`) usa este mismo motor y formato, pero crea
+> siempre los códigos nuevos y los deja **visibles** (sin categoría). Muestra
+> cada columna del Excel y en qué campo se guarda: ITEM, COSTO Resultado y las
+> columnas de Utilidad se reconocen pero no se guardan (son cálculos).
+
 1. En Fox Smart Business, exportar a Excel el **Listado de precios** (columnas
    ITEM, CODIGO, DESCRIPCION, MARCA, UM, COSTO Anterior/Actual, MINIMO %,
    LISTA % / Precio, STOCK).
@@ -100,9 +106,12 @@ Content-Type: application/json
 | `nombre` | texto | para crear | Descripción comercial |
 | `marca`, `um` | texto | no | Marca y unidad de medida |
 | `costo` | número | no | Costo actual (S/) |
+| `costo_anterior` | número | no | Costo anterior (S/). Si no se envía, se usa el costo previo cuando el costo cambia |
 | `stock` | número | no | Stock actual |
 | `minimo_porcentaje`, `lista_porcentaje` | número | no | Márgenes (%) |
 | `precio` | número | no | Precio final, si no se envía costo y % lista |
+| `precio_minimo` | número | no | Precio mínimo, si no se envía costo y % mínimo |
+| `codigo_barras` | texto | no | Código de barras (EAN), columna "Catálogo" del listado |
 | `crear_nuevos` | bool | no | Crear (ocultos) los códigos que no existan |
 | `simular` | bool | no | Calcula y responde sin guardar nada (para pruebas) |
 

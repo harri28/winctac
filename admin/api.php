@@ -106,19 +106,24 @@ try {
             $costoActual      = max(0, floatval($_POST['costo_actual'] ?? 0));
             $minimoPorcentaje = floatval($_POST['minimo_porcentaje'] ?? 0);
             $listaPorcentaje  = floatval($_POST['lista_porcentaje'] ?? 0);
+            $codigoBarras     = trim(mb_substr($_POST['codigo_barras'] ?? '', 0, 50));
 
-            // El precio de venta se calcula del costeo, nunca se escribe a mano.
-            // Si todavía no se cargó un costo actual para este producto (caso de
-            // productos ya existentes antes de este costeo), se conserva el
-            // precio que ya tenía en vez de pisarlo con 0.
+            // El precio de venta (y el mínimo) se calculan del costeo, nunca se
+            // escriben a mano. Si todavía no se cargó un costo actual para este
+            // producto (caso de productos ya existentes antes de este costeo),
+            // se conservan los precios que ya tenía en vez de pisarlos con 0.
             if ($costoActual > 0) {
-                $precio = round($costoActual * (1 + $listaPorcentaje / 100), 2);
+                $precio       = round($costoActual * (1 + $listaPorcentaje / 100), 2);
+                $precioMinimo = round($costoActual * (1 + $minimoPorcentaje / 100), 2);
             } elseif ($productoId) {
-                $prevPrecio = $pdo->prepare('SELECT precio FROM productos WHERE id = ? AND tienda_id = ?');
+                $prevPrecio = $pdo->prepare('SELECT precio, precio_minimo FROM productos WHERE id = ? AND tienda_id = ?');
                 $prevPrecio->execute([$productoId, TIENDA_ID]);
-                $precio = (float) $prevPrecio->fetchColumn();
+                $prev = $prevPrecio->fetch() ?: ['precio' => 0, 'precio_minimo' => 0];
+                $precio       = (float) $prev['precio'];
+                $precioMinimo = (float) $prev['precio_minimo'];
             } else {
                 $precio = 0;
+                $precioMinimo = 0;
             }
 
             // Etiquetas de búsqueda: llegan como JSON (array de strings) desde el input tipo chips.
@@ -173,27 +178,27 @@ try {
                     }
                     $pdo->prepare('
                         UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, imagen_path=?, etiquetas=?,
-                               marca=?, um=?, costo_anterior=?, costo_actual=?, minimo_porcentaje=?, lista_porcentaje=?, updated_at=NOW()
+                               marca=?, um=?, costo_anterior=?, costo_actual=?, minimo_porcentaje=?, lista_porcentaje=?, precio_minimo=?, codigo_barras=?, updated_at=NOW()
                         WHERE id=? AND tienda_id=?
                     ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath, $etiquetasJson,
-                                  $marca, $um, $costoAnterior, $costoActual, $minimoPorcentaje, $listaPorcentaje, $productoId, TIENDA_ID]);
+                                  $marca, $um, $costoAnterior, $costoActual, $minimoPorcentaje, $listaPorcentaje, $precioMinimo, $codigoBarras, $productoId, TIENDA_ID]);
                 } else {
                     $pdo->prepare('
                         UPDATE productos SET nombre=?, codigo=?, descripcion=?, precio=?, stock=?, categoria_id=?, activo=?, etiquetas=?,
-                               marca=?, um=?, costo_anterior=?, costo_actual=?, minimo_porcentaje=?, lista_porcentaje=?, updated_at=NOW()
+                               marca=?, um=?, costo_anterior=?, costo_actual=?, minimo_porcentaje=?, lista_porcentaje=?, precio_minimo=?, codigo_barras=?, updated_at=NOW()
                         WHERE id=? AND tienda_id=?
                     ')->execute([$nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $etiquetasJson,
-                                  $marca, $um, $costoAnterior, $costoActual, $minimoPorcentaje, $listaPorcentaje, $productoId, TIENDA_ID]);
+                                  $marca, $um, $costoAnterior, $costoActual, $minimoPorcentaje, $listaPorcentaje, $precioMinimo, $codigoBarras, $productoId, TIENDA_ID]);
                 }
             } else {
                 $ins = $pdo->prepare('
                     INSERT INTO productos (tienda_id, nombre, codigo, descripcion, precio, stock, categoria_id, activo, imagen_path, etiquetas,
-                                            marca, um, costo_anterior, costo_actual, minimo_porcentaje, lista_porcentaje)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                            marca, um, costo_anterior, costo_actual, minimo_porcentaje, lista_porcentaje, precio_minimo, codigo_barras)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     RETURNING id
                 ');
                 $ins->execute([TIENDA_ID, $nombre, $codigo, $descripcion, $precio, $stock, $categoriaId, $activo, $imagenPath ?? '', $etiquetasJson,
-                               $marca, $um, $costoAnterior, $costoActual, $minimoPorcentaje, $listaPorcentaje]);
+                               $marca, $um, $costoAnterior, $costoActual, $minimoPorcentaje, $listaPorcentaje, $precioMinimo, $codigoBarras]);
                 $productoId = $ins->fetchColumn();
             }
 

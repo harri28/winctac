@@ -146,6 +146,10 @@ CREATE TABLE IF NOT EXISTS productos (
     -- correcto aunque poco útil para mostrar, pero no debe romper el guardado.
     minimo_porcentaje DECIMAL(12,2) NOT NULL DEFAULT 0,
     lista_porcentaje DECIMAL(12,2) NOT NULL DEFAULT 0,
+    -- Precio mínimo de venta = costo_actual × (1 + minimo_porcentaje / 100)
+    precio_minimo DECIMAL(10,2) NOT NULL DEFAULT 0,
+    -- Código de barras (EAN), columna "Catálogo" del listado de precios
+    codigo_barras VARCHAR(50) NOT NULL DEFAULT '',
     created_at TIMESTAMP DEFAULT NOW(),
     updated_at TIMESTAMP DEFAULT NOW()
 );

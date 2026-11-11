@@ -406,6 +406,14 @@ $migraciones = [
     'compras_tienda_dni_idx'          => "CREATE INDEX IF NOT EXISTS compras_tienda_dni_idx ON compras_tienda (tienda_id, dni, estado)",
     'puntos_movimientos_compra_tienda' => "ALTER TABLE puntos_movimientos ADD COLUMN IF NOT EXISTS compra_tienda_id INTEGER REFERENCES compras_tienda(id)",
     'clientes_dni_idx'                => "CREATE INDEX IF NOT EXISTS clientes_dni_idx ON clientes (dni)",
+
+    // ── Importar productos (Excel "Listado de precios"): columnas que el
+    // listado trae y el catálogo no guardaba. codigo_barras ← "Catálogo"
+    // (EAN), precio_minimo ← "MINIMO Precio S/" = costo × (1 + % mínimo).
+    'productos_codigo_barras'     => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS codigo_barras VARCHAR(50) NOT NULL DEFAULT ''",
+    'productos_precio_minimo'     => "ALTER TABLE productos ADD COLUMN IF NOT EXISTS precio_minimo DECIMAL(10,2) NOT NULL DEFAULT 0",
+    'productos_precio_minimo_backfill' => "UPDATE productos SET precio_minimo = ROUND(costo_actual * (1 + minimo_porcentaje / 100), 2) WHERE precio_minimo = 0 AND costo_actual > 0 AND minimo_porcentaje > 0",
+    'productos_tienda_codigo_barras_idx' => "CREATE INDEX IF NOT EXISTS productos_tienda_codigo_barras_idx ON productos (tienda_id, codigo_barras) WHERE codigo_barras <> ''",
 ];
 
 foreach ($migraciones as $nombre => $sql) {

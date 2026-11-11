@@ -15,7 +15,8 @@ $pagina    = max(1, intval($_GET['pagina'] ?? 1));
 $where  = ['p.tienda_id = ?'];
 $params = [TIENDA_ID];
 if ($fBuscar !== '') {
-    $where[]  = '(p.nombre ILIKE ? OR p.codigo ILIKE ?)';
+    $where[]  = '(p.nombre ILIKE ? OR p.codigo ILIKE ? OR p.codigo_barras ILIKE ?)';
+    $params[] = "%$fBuscar%";
     $params[] = "%$fBuscar%";
     $params[] = "%$fBuscar%";
 }
@@ -79,6 +80,7 @@ function paginaUrl(int $n, string $buscar, string $cat, string $estado): string 
     <div style="display:flex;gap:10px">
         <button onclick="toggleTodos(true)" class="btn btn-secondary" style="font-size:.83rem"><i class="fas fa-eye"></i> Activar todos</button>
         <button onclick="toggleTodos(false)" class="btn btn-secondary" style="font-size:.83rem"><i class="fas fa-eye-slash"></i> Desactivar todos</button>
+        <a href="<?= BASE_URL ?>/admin/importar-productos.php" class="btn btn-secondary" style="font-size:.83rem"><i class="fas fa-file-import"></i> Importar productos</a>
         <button onclick="abrirNuevo()" class="btn btn-primary" style="font-size:.83rem"><i class="fas fa-plus"></i> Nuevo producto</button>
     </div>
 </div>
@@ -246,6 +248,7 @@ function paginaUrl(int $n, string $buscar, string $cat, string $estado): string 
                             <th colspan="3">MÍNIMO</th>
                             <th colspan="3">LISTA</th>
                             <th rowspan="2">STOCK</th>
+                            <th rowspan="2">CATÁLOGO</th>
                         </tr>
                         <tr>
                             <th>Anterior S/</th><th>Actual S/</th><th>Resultado</th>
@@ -270,6 +273,7 @@ function paginaUrl(int $n, string $buscar, string $cat, string $estado): string 
                             <td id="r-precio-lista" class="planilla-readonly" style="width:75px;color:var(--primary);font-weight:700">0.00</td>
                             <td id="r-utilidad-lista" class="planilla-readonly" style="width:70px">0.00</td>
                             <td><input type="number" id="f-stock" class="planilla-input" style="width:60px" step="1" min="0" placeholder="0"></td>
+                            <td><input type="text" id="f-codigo-barras" class="planilla-input" style="width:115px" maxlength="50" placeholder="Cód. barras" title="Código de barras (EAN)"></td>
                         </tr>
                     </tbody>
                 </table>
@@ -659,6 +663,7 @@ function abrirNuevo() {
     precioActualProducto = 0;
     recalcularPrecio();
     document.getElementById('f-stock').value = '';
+    document.getElementById('f-codigo-barras').value = '';
     document.getElementById('f-descripcion').value = '';
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-activo').checked = true;
@@ -690,6 +695,7 @@ function abrirEditar(p) {
     precioActualProducto = parseFloat(p.precio || 0);
     recalcularPrecio();
     document.getElementById('f-stock').value = p.stock || '';
+    document.getElementById('f-codigo-barras').value = p.codigo_barras || '';
     document.getElementById('f-descripcion').value = p.descripcion || '';
     document.getElementById('f-imagen').value = '';
     document.getElementById('f-activo').checked = p.activo === true;
@@ -858,6 +864,7 @@ async function guardarProducto() {
     form.append('minimo_porcentaje', document.getElementById('f-minimo-pct').value || 0);
     form.append('lista_porcentaje', document.getElementById('f-lista-pct').value || 0);
     form.append('stock', stock);
+    form.append('codigo_barras', document.getElementById('f-codigo-barras').value.trim());
     form.append('descripcion', document.getElementById('f-descripcion').value.trim());
     form.append('etiquetas', JSON.stringify(tagsActuales));
 

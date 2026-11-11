@@ -84,6 +84,7 @@ $historial = $histStmt->fetchAll();
 $camposLabel = [
     'codigo' => 'Código', 'nombre' => 'Descripción', 'marca' => 'Marca', 'um' => 'UM', 'costo' => 'Costo actual',
     'stock' => 'Stock', 'minimo_porcentaje' => '% Mínimo', 'lista_porcentaje' => '% Lista', 'precio' => 'Precio lista',
+    'costo_anterior' => 'Costo anterior', 'precio_minimo' => 'Precio mínimo', 'codigo_barras' => 'Código de barras',
 ];
 $resultado = $aplicado ?? $preview;
 ?>

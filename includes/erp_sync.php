@@ -15,7 +15,8 @@
 // ============================================================
 
 // Campos que entiende el motor; todo salvo `codigo` es opcional por fila.
-const ERP_CAMPOS = ['codigo', 'nombre', 'marca', 'um', 'costo', 'stock', 'minimo_porcentaje', 'lista_porcentaje', 'precio'];
+const ERP_CAMPOS = ['codigo', 'nombre', 'marca', 'um', 'costo', 'costo_anterior', 'stock', 'minimo_porcentaje', 'precio_minimo',
+    'lista_porcentaje', 'precio', 'codigo_barras'];
 
 // ── Lectura de archivos ──────────────────────────────────────
 
@@ -154,10 +155,14 @@ function erpMapearFilas(array $filas): array {
         'marca'             => ['/^marca/'],
         'um'                => ['/^(um|u m|unidad|unidad de medida)$/'],
         'costo'             => ['/^costo actual/', '/^costo( s)?$/', '/^costo unitario/'],
+        'costo_anterior'    => ['/^costo anterior/'],
         'stock'             => ['/^(stock|saldo|existencia|cantidad)/'],
         'minimo_porcentaje' => ['/^minimo %$/'],
+        'precio_minimo'     => ['/^minimo precio/', '/^precio minimo/'],
         'lista_porcentaje'  => ['/^lista %$/', '/^(margen|% lista)$/'],
         'precio'            => ['/^lista precio/', '/^(precio|precio venta|pvp)( s)?$/'],
+        // "Catálogo" en el Listado de precios de Fox = código de barras (EAN)
+        'codigo_barras'     => ['/^(catalogo|codigo de barras|codigo barras|cod barras|ean|barcode)$/'],
     ];
     $mapa = [];
     foreach ($reglas as $campo => $patrones) {
@@ -191,27 +196,40 @@ function erpNumero($v): ?float {
     return is_numeric($v) ? (float) $v : null;
 }
 
+// Código de barras como texto: Excel lo guarda como número, así que puede
+// llegar como "7750000123456.0" o en notación científica ("7.75E+12").
+function erpCodigoBarras($v): string {
+    $v = trim((string) ($v ?? ''));
+    if ($v === '') return '';
+    if (preg_match('/^\d+\.0+$/', $v)) $v = preg_replace('/\.0+$/', '', $v);
+    elseif (preg_match('/^\d+(\.\d+)?E\+\d+$/i', $v)) $v = number_format((float) $v, 0, '', '');
+    return mb_substr($v, 0, 50);
+}
+
 // ── Motor de sincronización ──────────────────────────────────
 
 // $filas: lista de ['codigo' => ..., y opcionales de ERP_CAMPOS].
 // $simular = true calcula todo dentro de una transacción y hace rollback
 // (vista previa del admin). Con $simular = false queda registrada en
 // erp_sincronizaciones.
-function erpSincronizarProductos(PDO $pdo, array $filas, string $origen, string $referencia, bool $crearNuevos, bool $simular): array {
+// $publicarNuevos: los productos creados quedan visibles (Importar productos)
+// en vez de ocultos hasta revisarlos (Integración ERP / API).
+function erpSincronizarProductos(PDO $pdo, array $filas, string $origen, string $referencia, bool $crearNuevos, bool $simular, bool $publicarNuevos = false): array {
     $res = [
         'total' => count($filas), 'actualizados' => 0, 'creados' => 0, 'sin_cambios' => 0,
         'no_encontrados' => [], 'errores' => [], 'cambios' => [],
     ];
 
     $existentes = [];
-    $stmt = $pdo->prepare('SELECT id, codigo, nombre, marca, um, precio, stock, costo_anterior, costo_actual, minimo_porcentaje, lista_porcentaje FROM productos WHERE tienda_id = ? AND codigo <> \'\'');
+    $stmt = $pdo->prepare('SELECT id, codigo, nombre, marca, um, precio, stock, costo_anterior, costo_actual, minimo_porcentaje, lista_porcentaje,
+        precio_minimo, codigo_barras FROM productos WHERE tienda_id = ? AND codigo <> \'\'');
     $stmt->execute([TIENDA_ID]);
     foreach ($stmt as $p) $existentes[mb_strtoupper(trim($p['codigo']))] = $p;
 
     $upd = $pdo->prepare('UPDATE productos SET nombre = ?, marca = ?, um = ?, precio = ?, stock = ?, costo_anterior = ?, costo_actual = ?,
-        minimo_porcentaje = ?, lista_porcentaje = ?, updated_at = NOW() WHERE id = ? AND tienda_id = ?');
+        minimo_porcentaje = ?, lista_porcentaje = ?, precio_minimo = ?, codigo_barras = ?, updated_at = NOW() WHERE id = ? AND tienda_id = ?');
     $ins = $pdo->prepare('INSERT INTO productos (tienda_id, nombre, codigo, marca, um, precio, stock, costo_anterior, costo_actual,
-        minimo_porcentaje, lista_porcentaje, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, FALSE)');
+        minimo_porcentaje, lista_porcentaje, precio_minimo, codigo_barras, activo) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
 
     $vistos = [];
     $pdo->beginTransaction();
@@ -225,11 +243,15 @@ function erpSincronizarProductos(PDO $pdo, array $filas, string $origen, string 
             $vistos[$clave] = true;
 
             $costo  = erpNumero($f['costo'] ?? null);
+            $costoAnt = erpNumero($f['costo_anterior'] ?? null);
             $stock  = erpNumero($f['stock'] ?? null);
             $minimo = erpNumero($f['minimo_porcentaje'] ?? null);
+            $precioMin = erpNumero($f['precio_minimo'] ?? null);
             $lista  = erpNumero($f['lista_porcentaje'] ?? null);
             $precio = erpNumero($f['precio'] ?? null);
-            if (($costo !== null && $costo < 0) || ($stock !== null && $stock < 0) || ($precio !== null && $precio < 0)) {
+            $barras = erpCodigoBarras($f['codigo_barras'] ?? '');
+            if (($costo !== null && $costo < 0) || ($stock !== null && $stock < 0) || ($precio !== null && $precio < 0)
+                || ($costoAnt !== null && $costoAnt < 0) || ($precioMin !== null && $precioMin < 0)) {
                 $res['errores'][] = "Fila $fila ($codigo): costo, stock o precio negativo"; continue;
             }
             $nombre = mb_substr(trim((string) ($f['nombre'] ?? '')), 0, 200);
@@ -244,8 +266,11 @@ function erpSincronizarProductos(PDO $pdo, array $filas, string $origen, string 
                 if (!$crearNuevos) { $res['no_encontrados'][] = $codigo; continue; }
                 if ($nombre === '') { $res['errores'][] = "Fila $fila ($codigo): producto nuevo sin descripción"; continue; }
                 $nuevoLista = $lista ?? 0;
+                $nuevoMinimo = $minimo ?? 0;
                 $nuevoPrecio = ($costo > 0 && $nuevoLista > 0) ? round($costo * (1 + $nuevoLista / 100), 2) : ($precio ?? 0);
-                $ins->execute([TIENDA_ID, $nombre, $codigo, $marca, $um, $nuevoPrecio, (int) ($stock ?? 0), $costo ?? 0, $costo ?? 0, $minimo ?? 0, $nuevoLista]);
+                $nuevoPrecioMin = ($costo > 0 && $nuevoMinimo > 0) ? round($costo * (1 + $nuevoMinimo / 100), 2) : round($precioMin ?? 0, 2);
+                $ins->execute([TIENDA_ID, $nombre, $codigo, $marca, $um, $nuevoPrecio, (int) round($stock ?? 0), $costoAnt ?? $costo ?? 0, $costo ?? 0,
+                    $nuevoMinimo, $nuevoLista, $nuevoPrecioMin, $barras, $publicarNuevos ? 'true' : 'false']);
                 $res['creados']++;
                 if (count($res['cambios']) < 25) $res['cambios'][] = ['codigo' => $codigo, 'nombre' => $nombre, 'tipo' => 'nuevo', 'precio' => [null, $nuevoPrecio], 'stock' => [null, (int) ($stock ?? 0)]];
                 continue;
@@ -258,20 +283,28 @@ function erpSincronizarProductos(PDO $pdo, array $filas, string $origen, string 
             if ($nCosto > 0 && $nLista > 0)  $nPrecio = round($nCosto * (1 + $nLista / 100), 2);
             elseif ($precio !== null)        $nPrecio = round($precio, 2);
             else                             $nPrecio = (float) $p['precio'];
+            if ($nCosto > 0 && $nMinimo > 0)   $nPrecioMin = round($nCosto * (1 + $nMinimo / 100), 2);
+            elseif ($precioMin !== null)       $nPrecioMin = round($precioMin, 2);
+            else                               $nPrecioMin = (float) $p['precio_minimo'];
             $nNombre = $nombre !== '' ? $nombre : $p['nombre'];
             $nMarca  = $marca !== '' ? $marca : $p['marca'];
             $nUm     = $um !== '' ? $um : $p['um'];
+            $nBarras = $barras !== '' ? $barras : $p['codigo_barras'];
 
             $cambiaCosto = abs($nCosto - (float) $p['costo_actual']) > 0.00005;
+            // costo_anterior: el del archivo si lo trae (el listado de Fox lo
+            // incluye); si no, el costo previo solo cuando el costo cambia.
+            if ($costoAnt !== null) $costoAnterior = $costoAnt;
+            else $costoAnterior = $cambiaCosto ? (float) $p['costo_actual'] : (float) $p['costo_anterior'];
+
             $hayCambio = $cambiaCosto || abs($nPrecio - (float) $p['precio']) > 0.004 || $nStock !== (int) $p['stock']
                 || abs($nLista - (float) $p['lista_porcentaje']) > 0.004 || abs($nMinimo - (float) $p['minimo_porcentaje']) > 0.004
-                || $nNombre !== $p['nombre'] || $nMarca !== $p['marca'] || $nUm !== $p['um'];
+                || abs($nPrecioMin - (float) $p['precio_minimo']) > 0.004 || abs($costoAnterior - (float) $p['costo_anterior']) > 0.00005
+                || $nNombre !== $p['nombre'] || $nMarca !== $p['marca'] || $nUm !== $p['um'] || $nBarras !== $p['codigo_barras'];
             if (!$hayCambio) { $res['sin_cambios']++; continue; }
 
-            // costo_anterior guarda el costo previo solo cuando el costo cambia
-            $costoAnterior = $cambiaCosto ? (float) $p['costo_actual'] : (float) $p['costo_anterior'];
             $upd->execute([$nNombre, $nMarca, $nUm, $nPrecio, $nStock, $costoAnterior,
-                $nCosto, $nMinimo, $nLista, $p['id'], TIENDA_ID]);
+                $nCosto, $nMinimo, $nLista, $nPrecioMin, $nBarras, $p['id'], TIENDA_ID]);
             $res['actualizados']++;
             if (count($res['cambios']) < 25) {
                 $res['cambios'][] = ['codigo' => $codigo, 'nombre' => $nNombre, 'tipo' => 'actualizado',
