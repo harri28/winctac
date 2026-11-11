@@ -29,9 +29,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_facturacion'])) 
 }
 ?>
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title"><i class="fas fa-file-invoice"></i> Facturación</h1>
-</div>
+<?php adminSeccionTabs('configuracion'); ?>
 
 <?php if ($success): ?>
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>

@@ -24,7 +24,7 @@ $cfgStmt->execute([TIENDA_ID]);
 $cfg = $cfgStmt->fetch();
 ?>
 
-<?php require __DIR__ . '/includes/fidelizacion_tabs.php'; ?>
+<?php adminSeccionTabs('fidelizacion'); ?>
 
 <?php if ($success): ?>
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>

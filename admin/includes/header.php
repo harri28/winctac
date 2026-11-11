@@ -4,6 +4,7 @@
 // ============================================================
 require_once __DIR__ . '/../../config/app.php';
 require_once __DIR__ . '/../../config/database.php';
+require_once __DIR__ . '/secciones.php';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && !csrfTokenValido($_POST['csrf_token'] ?? null)) {
     http_response_code(403);
@@ -173,10 +174,8 @@ document.addEventListener('click', function (event) {
             ['type' => 'group', 'icon' => 'fa-users', 'label' => 'Clientes', 'children' => [
                 ['page' => 'clientes', 'href' => BASE_URL . '/admin/clientes.php', 'icon' => 'fa-user', 'label' => 'Clientes'],
             ]],
-            // Una sola entrada: sus secciones son pestañas dentro de la pantalla
-            // (admin/includes/fidelizacion_tabs.php). 'pages' = páginas en las que queda activa.
-            ['type' => 'link', 'page' => 'puntos', 'pages' => ['puntos', 'compras_tienda', 'recompensas', 'cupones', 'niveles'],
-             'href' => BASE_URL . '/admin/puntos.php', 'icon' => 'fa-gift', 'label' => 'Fidelización'],
+            // Una sola entrada: sus secciones son pestañas dentro de la pantalla (admin/includes/secciones.php)
+            adminSeccionMenu('fidelizacion'),
             ['type' => 'group', 'icon' => 'fa-bullhorn', 'label' => 'Marketing', 'children' => [
                 ['page' => 'campanas',    'href' => BASE_URL . '/admin/campanas.php',    'icon' => 'fa-flag',       'label' => 'Campañas'],
                 ['page' => 'promociones', 'href' => BASE_URL . '/admin/promociones.php', 'icon' => 'fa-percentage', 'label' => 'Promociones'],
@@ -184,14 +183,7 @@ document.addEventListener('click', function (event) {
             ['type' => 'link', 'page' => 'mensajes', 'href' => BASE_URL . '/admin/mensajes.php', 'icon' => 'fa-envelope-open-text', 'label' => 'Mensajes', 'badge' => $mensajesNuevosCount],
             ['type' => 'link', 'page' => 'postulantes', 'href' => BASE_URL . '/admin/postulantes.php', 'icon' => 'fa-briefcase', 'label' => 'Postulantes', 'badge' => $postulantesNuevasCount],
             ['type' => 'link', 'page' => 'reportes', 'href' => BASE_URL . '/admin/reportes.php', 'icon' => 'fa-chart-bar', 'label' => 'Reportes'],
-            ['type' => 'group', 'icon' => 'fa-cog', 'label' => 'Configuración', 'children' => [
-                ['page' => 'config',      'href' => BASE_URL . '/admin/config.php',      'icon' => 'fa-sliders-h',    'label' => 'Configuración'],
-                ['page' => 'facturacion', 'href' => BASE_URL . '/admin/facturacion.php', 'icon' => 'fa-file-invoice', 'label' => 'Facturación'],
-                ['page' => 'banners',       'href' => BASE_URL . '/admin/banners.php',       'icon' => 'fa-images',           'label' => 'Banners'],
-                ['page' => 'banners_popup',     'href' => BASE_URL . '/admin/banners-popup.php',     'icon' => 'fa-window-maximize',      'label' => 'Banners pop-up'],
-                ['page' => 'banners_flotantes', 'href' => BASE_URL . '/admin/banners-flotantes.php', 'icon' => 'fa-envelope-open-text',   'label' => 'Banners flotantes'],
-                ['page' => 'portal_web',    'href' => BASE_URL . '/admin/portal-web.php',    'icon' => 'fa-globe',            'label' => 'Portal Web'],
-            ]],
+            adminSeccionMenu('configuracion'),
         ];
 
         foreach ($adminMenu as $item):

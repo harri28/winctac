@@ -68,7 +68,7 @@ $tipoLabel = ['ganado' => 'Ganado', 'canjeado' => 'Canjeado', 'revertido' => 'Re
 $estadoBadge = ['activo' => ['#dcfce7', '#166534'], 'usado' => ['#f1f5f9', '#475569'], 'vencido' => ['#fee2e2', '#991b1b']];
 ?>
 
-<?php require __DIR__ . '/includes/fidelizacion_tabs.php'; ?>
+<?php adminSeccionTabs('fidelizacion'); ?>
 
 <?php if ($success): ?>
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>

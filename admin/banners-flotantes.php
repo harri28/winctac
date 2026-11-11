@@ -163,9 +163,7 @@ if ($_GET['edit'] ?? '') {
 }
 ?>
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title"><i class="fas fa-envelope-open-text"></i> Banners flotantes</h1>
-</div>
+<?php adminSeccionTabs('configuracion'); ?>
 
 <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-danger"><?= htmlspecialchars($error) ?></div><?php endif; ?>

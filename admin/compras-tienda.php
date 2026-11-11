@@ -120,7 +120,7 @@ $estadosLabel = [
 ];
 ?>
 
-<?php require __DIR__ . '/includes/fidelizacion_tabs.php'; ?>
+<?php adminSeccionTabs('fidelizacion'); ?>
 
 <p style="color:var(--text-muted);font-size:.85rem;margin:-8px 0 18px">
     Compras registradas en el ERP / tienda física que acumulan puntos. Se identifican por el DNI del cliente afiliado

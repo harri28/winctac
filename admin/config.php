@@ -129,9 +129,7 @@ $usosPorEmpresa = [];
 foreach ($usosRaw as $r) { $usosPorEmpresa[(int) $r['empresa_envio_id']] = (int) $r['n']; }
 ?>
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title"><i class="fas fa-cog"></i> Configuración</h1>
-</div>
+<?php adminSeccionTabs('configuracion'); ?>
 
 <?php if ($success): ?>
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>

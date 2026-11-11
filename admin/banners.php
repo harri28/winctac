@@ -111,10 +111,9 @@ $bannersStmt->execute([TIENDA_ID]);
 $banners = $bannersStmt->fetchAll();
 ?>
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title"><i class="fas fa-images"></i> Banners del inicio</h1>
-    <p style="color:var(--text-muted);font-size:.85rem;margin-top:2px">6 slots para el carrusel. Vincula cada uno a un producto o sube una imagen personalizada.</p>
-</div>
+<?php adminSeccionTabs('configuracion'); ?>
+
+<p style="color:var(--text-muted);font-size:.85rem;margin:-8px 0 18px">6 slots para el carrusel. Vincula cada uno a un producto o sube una imagen personalizada.</p>
 
 <?php if ($success): ?>
 <div class="alert alert-success"><i class="fas fa-check-circle"></i> <?= htmlspecialchars($success) ?></div>
