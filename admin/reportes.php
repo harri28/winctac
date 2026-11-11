@@ -19,10 +19,49 @@ $tab = $_GET['tab'] ?? 'resumen';
 $tabsValidas = ['resumen', 'ventas', 'productos', 'clientes', 'envios', 'fidelizacion'];
 if (!in_array($tab, $tabsValidas, true)) $tab = 'resumen';
 
-// ── Datos por pestaña ────────────────────────────────────────
-$data = [];
+// Periodo anterior de igual duración (para comparar las cifras del Resumen)
+$diasPeriodo   = max(1, (int) round((strtotime($hastaExcl) - strtotime($desde)) / 86400));
+$prevDesde     = date('Y-m-d', strtotime($desde . " -$diasPeriodo days"));
+$prevHastaExcl = $desde;
 
-if ($tab === 'resumen') {
+// ── Consultas compartidas entre pestañas ─────────────────────
+
+// Serie continua del rango (los tramos sin pedidos salen en 0). Con rangos
+// largos se agrupa por semana o por mes para que el gráfico siga legible;
+// la exportación CSV siempre va por día.
+$granularidad = isset($_GET['export']) || $diasPeriodo <= 92 ? 'day' : ($diasPeriodo <= 366 ? 'week' : 'month');
+$granLabel    = ['day' => 'día', 'week' => 'semana', 'month' => 'mes'][$granularidad];
+
+function reporteDiario(PDO $pdo, string $desde, string $hasta, string $gran = 'day'): array {
+    if (!in_array($gran, ['day', 'week', 'month'], true)) $gran = 'day';
+    $hastaExcl = date('Y-m-d', strtotime($hasta . ' +1 day'));
+    // Cada tramo se recorta al rango pedido (la primera semana/mes puede
+    // empezar antes de "desde").
+    $st = $pdo->prepare("
+        SELECT b::date AS dia,
+               COUNT(p.id) FILTER (WHERE p.estado != 'cancelado') AS pedidos,
+               COUNT(p.id) FILTER (WHERE p.estado = 'cancelado')  AS cancelados,
+               COALESCE(SUM(p.total) FILTER (WHERE p.estado != 'cancelado'), 0) AS ingresos,
+               COUNT(DISTINCT p.cliente_id) FILTER (WHERE p.estado != 'cancelado') AS clientes
+        FROM generate_series(date_trunc('$gran', ?::timestamp), ?::timestamp, interval '1 $gran') AS b
+        LEFT JOIN pedidos p ON p.created_at >= GREATEST(b, ?::timestamp)
+                           AND p.created_at <  LEAST(b + interval '1 $gran', ?::timestamp)
+        GROUP BY b ORDER BY b
+    ");
+    $st->execute([$desde, $hasta, $desde, $hastaExcl]);
+    return $st->fetchAll();
+}
+
+// Etiqueta del eje X según la agrupación
+function repEtiquetaTramo(string $dia, string $gran): string {
+    static $meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    $t = strtotime($dia);
+    if ($gran === 'month') return $meses[(int) date('n', $t) - 1] . ' ' . date('Y', $t);
+    if ($gran === 'week')  return 'Sem. ' . date('d/m', $t);
+    return date('d/m', $t);
+}
+
+function reporteKpis(PDO $pdo, string $desde, string $hastaExcl): array {
     $k = $pdo->prepare("
         SELECT
             COUNT(*) FILTER (WHERE estado != 'cancelado') AS pedidos,
@@ -32,9 +71,76 @@ if ($tab === 'resumen') {
         FROM pedidos WHERE created_at >= ? AND created_at < ?
     ");
     $k->execute([$desde, $hastaExcl]);
-    $data['kpis'] = $k->fetch();
-    $data['kpis']['ticket_promedio'] = $data['kpis']['pedidos'] > 0
-        ? floatval($data['kpis']['ingresos']) / intval($data['kpis']['pedidos']) : 0;
+    $r = $k->fetch();
+    $r['ticket_promedio'] = $r['pedidos'] > 0 ? floatval($r['ingresos']) / intval($r['pedidos']) : 0;
+    return $r;
+}
+
+function reportePorEstado(PDO $pdo, string $desde, string $hastaExcl): array {
+    $e = $pdo->prepare("
+        SELECT estado, COUNT(*) AS n, COALESCE(SUM(total),0) AS total
+        FROM pedidos WHERE created_at >= ? AND created_at < ?
+        GROUP BY estado ORDER BY n DESC
+    ");
+    $e->execute([$desde, $hastaExcl]);
+    return $e->fetchAll();
+}
+
+function reporteTopProductos(PDO $pdo, string $desde, string $hastaExcl, int $limite): array {
+    $t = $pdo->prepare("
+        SELECT pd.producto_nombre, SUM(pd.cantidad) AS unidades, SUM(pd.subtotal) AS ingresos
+        FROM pedido_detalles pd JOIN pedidos p ON p.id = pd.pedido_id
+        WHERE p.estado != 'cancelado' AND p.created_at >= ? AND p.created_at < ?
+        GROUP BY pd.producto_nombre ORDER BY unidades DESC, ingresos DESC LIMIT $limite
+    ");
+    $t->execute([$desde, $hastaExcl]);
+    return $t->fetchAll();
+}
+
+function reportePorCategoria(PDO $pdo, string $desde, string $hastaExcl): array {
+    $c = $pdo->prepare("
+        SELECT COALESCE(cat.nombre, 'Sin categoría') AS categoria,
+               SUM(pd.cantidad) AS unidades, SUM(pd.subtotal) AS ingresos
+        FROM pedido_detalles pd
+        JOIN pedidos ped ON ped.id = pd.pedido_id
+        LEFT JOIN productos prod ON prod.id = pd.producto_id
+        LEFT JOIN categorias cat ON cat.id = prod.categoria_id
+        WHERE ped.estado != 'cancelado' AND ped.created_at >= ? AND ped.created_at < ?
+        GROUP BY categoria ORDER BY ingresos DESC
+    ");
+    $c->execute([$desde, $hastaExcl]);
+    return $c->fetchAll();
+}
+
+// ── Datos por pestaña ────────────────────────────────────────
+$data = [];
+
+if ($tab === 'resumen') {
+    $data['kpis']      = reporteKpis($pdo, $desde, $hastaExcl);
+    $data['kpis_prev'] = reporteKpis($pdo, $prevDesde, $prevHastaExcl);
+    $data['diario']    = reporteDiario($pdo, $desde, $hasta, $granularidad);
+    $data['por_estado']    = reportePorEstado($pdo, $desde, $hastaExcl);
+    $data['top10']         = reporteTopProductos($pdo, $desde, $hastaExcl, 10);
+    $data['por_categoria'] = array_slice(reportePorCategoria($pdo, $desde, $hastaExcl), 0, 10);
+
+    // Clientes que compraron en el periodo: nuevos (su primera compra válida
+    // cae en el periodo) vs recurrentes (ya habían comprado antes).
+    $nr = $pdo->prepare("
+        WITH compradores AS (
+            SELECT DISTINCT cliente_id FROM pedidos
+            WHERE estado != 'cancelado' AND cliente_id IS NOT NULL AND created_at >= ? AND created_at < ?
+        )
+        SELECT COUNT(*) FILTER (WHERE NOT EXISTS (
+                   SELECT 1 FROM pedidos q WHERE q.cliente_id = c.cliente_id AND q.estado != 'cancelado' AND q.created_at < ?
+               )) AS nuevos,
+               COUNT(*) AS total
+        FROM compradores c
+    ");
+    $nr->execute([$desde, $hastaExcl, $desde]);
+    $data['nuevos_recurrentes'] = $nr->fetch();
+    $inv = $pdo->prepare("SELECT COUNT(*) FROM pedidos WHERE estado != 'cancelado' AND cliente_id IS NULL AND created_at >= ? AND created_at < ?");
+    $inv->execute([$desde, $hastaExcl]);
+    $data['pedidos_invitados'] = (int) $inv->fetchColumn();
 
     $nc = $pdo->prepare("SELECT COUNT(*) FROM clientes WHERE created_at >= ? AND created_at < ?");
     $nc->execute([$desde, $hastaExcl]);
@@ -77,22 +183,8 @@ if ($tab === 'resumen') {
     $data['cupones_usados'] = (int) $cu->fetchColumn();
 
 } elseif ($tab === 'ventas') {
-    $d = $pdo->prepare("
-        SELECT DATE(created_at) AS dia, COUNT(*) AS pedidos,
-               COALESCE(SUM(total) FILTER (WHERE estado != 'cancelado'), 0) AS ingresos
-        FROM pedidos WHERE created_at >= ? AND created_at < ?
-        GROUP BY DATE(created_at) ORDER BY dia ASC
-    ");
-    $d->execute([$desde, $hastaExcl]);
-    $data['diario'] = $d->fetchAll();
-
-    $e = $pdo->prepare("
-        SELECT estado, COUNT(*) AS n, COALESCE(SUM(total),0) AS total
-        FROM pedidos WHERE created_at >= ? AND created_at < ?
-        GROUP BY estado ORDER BY n DESC
-    ");
-    $e->execute([$desde, $hastaExcl]);
-    $data['por_estado'] = $e->fetchAll();
+    $data['diario']     = reporteDiario($pdo, $desde, $hasta, $granularidad);
+    $data['por_estado'] = reportePorEstado($pdo, $desde, $hastaExcl);
 
     $pg = $pdo->prepare("
         SELECT metodo_pago, COUNT(*) AS n, COALESCE(SUM(total) FILTER (WHERE estado != 'cancelado'),0) AS total
@@ -127,19 +219,8 @@ if ($tab === 'resumen') {
     ");
     $p->execute([$desde, $hastaExcl]);
     $data['productos'] = $p->fetchAll();
-
-    $c = $pdo->prepare("
-        SELECT COALESCE(cat.nombre, 'Sin categoría') AS categoria,
-               SUM(pd.cantidad) AS unidades, SUM(pd.subtotal) AS ingresos
-        FROM pedido_detalles pd
-        JOIN pedidos ped ON ped.id = pd.pedido_id
-        LEFT JOIN productos prod ON prod.id = pd.producto_id
-        LEFT JOIN categorias cat ON cat.id = prod.categoria_id
-        WHERE ped.estado != 'cancelado' AND ped.created_at >= ? AND ped.created_at < ?
-        GROUP BY categoria ORDER BY ingresos DESC
-    ");
-    $c->execute([$desde, $hastaExcl]);
-    $data['por_categoria'] = $c->fetchAll();
+    $data['top10']         = reporteTopProductos($pdo, $desde, $hastaExcl, 10);
+    $data['por_categoria'] = reportePorCategoria($pdo, $desde, $hastaExcl);
 
     $stockBajoStmt = $pdo->prepare("
         SELECT nombre, codigo, stock FROM productos
@@ -231,9 +312,9 @@ if (isset($_GET['export'])) {
 
     switch ($tab) {
         case 'ventas':
-            fputcsv($out, ['Fecha', 'Pedidos', 'Ingresos (S/)']);
+            fputcsv($out, ['Fecha', 'Pedidos válidos', 'Pedidos cancelados', 'Ingresos (S/)']);
             foreach ($data['diario'] as $r) {
-                fputcsv($out, [$r['dia'], $r['pedidos'], number_format($r['ingresos'], 2, '.', '')]);
+                fputcsv($out, [$r['dia'], $r['pedidos'], $r['cancelados'], number_format($r['ingresos'], 2, '.', '')]);
             }
             break;
         case 'productos':
@@ -309,6 +390,65 @@ $estadoColors = ['pendiente' => '#f59e0b', 'confirmado' => '#3b82f6', 'enviado' 
 $estadoLabels = ['pendiente' => 'Pendiente', 'confirmado' => 'Confirmado', 'enviado' => 'Enviado', 'entregado' => 'Entregado', 'cancelado' => 'Cancelado'];
 $pagoColors   = ['billetera' => '#7c3aed', 'pos' => '#0e7490', 'efectivo' => '#16a34a'];
 $tipoMovLabel = ['ganado' => 'Ganado', 'canjeado' => 'Canjeado', 'revertido' => 'Revertido', 'ajuste_admin' => 'Ajuste'];
+$pagoLabels   = ['billetera' => 'Billetera digital', 'pos' => 'POS', 'efectivo' => 'Efectivo', 'yape' => 'Yape', 'plin' => 'Plin', 'transferencia' => 'Transferencia'];
+
+// ── Gráficos (Chart.js) ──────────────────────────────────────
+// Cada gráfico se describe aquí como datos; el JS del final los dibuja
+// sobre <canvas id="..."> . Sin datos, se muestra un estado vacío en su lugar.
+$repCharts = [];
+
+// Variación vs periodo anterior: [texto, 'up'|'down'|'flat']
+function repDelta(float $actual, float $anterior): array {
+    if (abs($anterior) < 0.00001) return $actual > 0 ? ['nuevo', 'up'] : ['sin cambios', 'flat'];
+    $pct = ($actual - $anterior) / $anterior * 100;
+    $txt = ($pct >= 0 ? '▲ +' : '▼ ') . number_format(abs($pct) < 10 ? $pct : round($pct), abs($pct) < 10 ? 1 : 0) . '%';
+    return [$txt, $pct > 0.05 ? 'up' : ($pct < -0.05 ? 'down' : 'flat')];
+}
+function repTieneDatos(array $valores): bool {
+    foreach ($valores as $v) if ((float) $v != 0) return true;
+    return false;
+}
+function repLabelCorto(string $s, int $max = 38): string {
+    return mb_strlen($s) > $max ? mb_substr($s, 0, $max - 1) . '…' : $s;
+}
+// Lienzo del gráfico o estado vacío.
+function repCanvas(string $id, bool $hayDatos, int $alto = 280, string $vacio = 'Sin datos en este periodo'): string {
+    if (!$hayDatos) return '<div class="empty-state" style="padding:36px 10px"><i class="fas fa-chart-simple"></i><p>' . $vacio . '</p></div>';
+    return '<div class="rep-chart" style="height:' . $alto . 'px"><canvas id="' . $id . '"></canvas></div>';
+}
+
+if (isset($data['diario'])) {
+    $repCharts['c_diario'] = [
+        'type'     => 'combo',
+        'labels'   => array_map(fn($d) => repEtiquetaTramo($d['dia'], $granularidad), $data['diario']),
+        'ingresos' => array_map(fn($d) => round((float) $d['ingresos'], 2), $data['diario']),
+        'pedidos'  => array_map(fn($d) => (int) $d['pedidos'], $data['diario']),
+    ];
+}
+if (isset($data['por_estado'])) {
+    $repCharts['c_estado'] = [
+        'type'   => 'doughnut',
+        'labels' => array_map(fn($e) => $estadoLabels[$e['estado']] ?? ucfirst($e['estado']), $data['por_estado']),
+        'values' => array_map(fn($e) => (int) $e['n'], $data['por_estado']),
+        'extra'  => array_map(fn($e) => (float) $e['total'], $data['por_estado']),
+        'colors' => array_map(fn($e) => $estadoColors[$e['estado']] ?? '#94a3b8', $data['por_estado']),
+    ];
+}
+if (isset($data['top10'])) {
+    $repCharts['c_top10'] = [
+        'type'   => 'hbar', 'unit' => 'unidades',
+        'labels' => array_map(fn($p) => repLabelCorto($p['producto_nombre']), $data['top10']),
+        'values' => array_map(fn($p) => (int) $p['unidades'], $data['top10']),
+    ];
+}
+if (isset($data['por_categoria'])) {
+    $cats = array_slice($data['por_categoria'], 0, 10);
+    $repCharts['c_categoria'] = [
+        'type'   => 'hbar', 'unit' => 'money',
+        'labels' => array_map(fn($c) => repLabelCorto($c['categoria']), $cats),
+        'values' => array_map(fn($c) => round((float) $c['ingresos'], 2), $cats),
+    ];
+}
 ?>
 
 <style>
@@ -317,6 +457,32 @@ $tipoMovLabel = ['ganado' => 'Ganado', 'canjeado' => 'Canjeado', 'revertido' => 
 .report-tab:hover { color:var(--primary); }
 .report-tab.active { color:var(--primary); border-bottom-color:var(--primary); }
 .report-kpi-grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(190px,1fr)); gap:14px; }
+
+/* Franja compacta de cifras (Resumen) */
+.rep-kpis { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; margin-bottom:18px; }
+.rep-kpi { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:12px 14px 8px; display:flex; flex-direction:column; min-width:0; }
+.rep-kpi__label { font-size:.72rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); }
+.rep-kpi__row { display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; margin-top:2px; }
+.rep-kpi__value { font-size:1.35rem; font-weight:800; color:var(--text); white-space:nowrap; }
+.rep-kpi__delta { font-size:.74rem; font-weight:700; padding:1px 7px; border-radius:20px; white-space:nowrap; }
+.rep-kpi__delta.up   { color:#166534; background:var(--success-bg); }
+.rep-kpi__delta.down { color:#991b1b; background:var(--danger-bg); }
+.rep-kpi__delta.flat { color:var(--text-muted); background:var(--surface-2); }
+.rep-kpi__prev { font-size:.72rem; color:var(--text-muted); }
+.rep-kpi__spark { height:34px; margin-top:6px; }
+
+/* Gráficos */
+.rep-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; margin-bottom:18px; }
+.rep-grid .card { margin:0; min-width:0; }
+.rep-grid .rep-wide { grid-column:1 / -1; }
+.rep-grid--3 { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.rep-chart { position:relative; width:100%; }
+.rep-card-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.rep-card-head .card-title { margin-bottom:0; }
+.rep-card-total { font-size:.82rem; color:var(--text-muted); }
+.rep-card-total strong { color:var(--text); }
+@media (max-width:1000px) { .rep-kpis { grid-template-columns:repeat(2,minmax(0,1fr)); } .rep-grid, .rep-grid--3 { grid-template-columns:1fr; } }
+@media (max-width:520px)  { .rep-kpis { grid-template-columns:1fr; } }
 </style>
 
 <div class="admin-topbar">
@@ -361,178 +527,150 @@ $tipoMovLabel = ['ganado' => 'Ganado', 'canjeado' => 'Canjeado', 'revertido' => 
     <?php endforeach; ?>
 </div>
 
-<?php if ($tab === 'resumen'): $k = $data['kpis']; ?>
+<?php if ($tab === 'resumen'):
+    $k = $data['kpis']; $kp = $data['kpis_prev']; $dia = $data['diario'];
+    $kpiDefs = [
+        // [etiqueta, valor actual, valor anterior, formato, serie diaria]
+        ['Ingresos',               (float) $k['ingresos'],            (float) $kp['ingresos'],            'money', array_map(fn($d) => round((float) $d['ingresos'], 2), $dia)],
+        ['Pedidos válidos',        (int) $k['pedidos'],               (int) $kp['pedidos'],               'int',   array_map(fn($d) => (int) $d['pedidos'], $dia)],
+        ['Ticket promedio',        (float) $k['ticket_promedio'],     (float) $kp['ticket_promedio'],     'money', array_map(fn($d) => $d['pedidos'] > 0 ? round($d['ingresos'] / $d['pedidos'], 2) : 0, $dia)],
+        ['Clientes que compraron', (int) $k['clientes_compraron'],    (int) $kp['clientes_compraron'],    'int',   array_map(fn($d) => (int) $d['clientes'], $dia)],
+    ];
+    $fmt = fn($v, $f) => $f === 'money' ? 'S/ ' . number_format($v, 2) : number_format($v);
 
-<div class="report-kpi-grid">
-    <div class="stat-card" style="border-top:3px solid var(--primary)">
-        <div class="stat-card-inner">
-            <div class="stat-icon stat-icon--blue"><i class="fas fa-shopping-bag"></i></div>
-            <div>
-                <div class="stat-label">Pedidos válidos</div>
-                <div class="stat-value" style="color:var(--primary)"><?= $k['pedidos'] ?></div>
-                <div class="stat-sub"><?= $k['cancelados'] ?> cancelados</div>
-            </div>
+    $nr = $data['nuevos_recurrentes'];
+    $nuevos = (int) $nr['nuevos']; $recurrentes = (int) $nr['total'] - $nuevos;
+    $repCharts['c_clientes'] = ['type' => 'doughnut', 'labels' => ['Nuevos', 'Recurrentes'], 'values' => [$nuevos, $recurrentes], 'colors' => ['#8b5cf6', '#0ea5e9']];
+    $pts = $data['puntos'];
+    $repCharts['c_puntos'] = [
+        'type' => 'bars', 'unit' => 'puntos',
+        'labels' => ['Otorgados', 'Canjeados', 'Revertidos'],
+        'values' => [(int) $pts['otorgados'], (int) $pts['canjeados'], (int) $pts['revertidos']],
+        'colors' => ['#f59e0b', '#10b981', '#ef4444'],
+    ];
+?>
+
+<div class="rep-kpis">
+    <?php foreach ($kpiDefs as $i => [$label, $actual, $anterior, $f, $serie]): [$dTxt, $dCls] = repDelta($actual, $anterior);
+        $repCharts['spark_' . $i] = ['type' => 'spark', 'values' => $serie]; ?>
+    <div class="rep-kpi">
+        <div class="rep-kpi__label"><?= $label ?></div>
+        <div class="rep-kpi__row">
+            <span class="rep-kpi__value"><?= $fmt($actual, $f) ?></span>
+            <span class="rep-kpi__delta <?= $dCls ?>" title="Comparado con <?= date('d/m/Y', strtotime($prevDesde)) ?> – <?= date('d/m/Y', strtotime($prevHastaExcl . ' -1 day')) ?>"><?= $dTxt ?></span>
         </div>
+        <div class="rep-kpi__prev">Periodo anterior: <?= $fmt($anterior, $f) ?></div>
+        <div class="rep-kpi__spark"><canvas id="spark_<?= $i ?>"></canvas></div>
     </div>
-    <div class="stat-card" style="border-top:3px solid var(--success)">
-        <div class="stat-card-inner">
-            <div class="stat-icon stat-icon--green"><i class="fas fa-coins"></i></div>
-            <div>
-                <div class="stat-label">Ingresos</div>
-                <div class="stat-value stat-value--md" style="color:var(--success)">S/ <?= number_format($k['ingresos'], 2) ?></div>
-                <div class="stat-sub">S/ <?= number_format($k['ticket_promedio'], 2) ?> ticket promedio</div>
-            </div>
+    <?php endforeach; ?>
+</div>
+
+<div class="rep-grid">
+    <div class="card rep-wide">
+        <div class="rep-card-head">
+            <div class="card-title"><i class="fas fa-chart-column" style="color:var(--primary)"></i> Ingresos y pedidos por <?= $granLabel ?></div>
+            <div class="rep-card-total"><strong>S/ <?= number_format($k['ingresos'], 2) ?></strong> · <?= (int) $k['pedidos'] ?> pedidos · <?= (int) $k['cancelados'] ?> cancelados</div>
         </div>
+        <?= repCanvas('c_diario', repTieneDatos($repCharts['c_diario']['pedidos']), 300, 'Sin ventas en este periodo') ?>
     </div>
-    <div class="stat-card" style="border-top:3px solid #8b5cf6">
-        <div class="stat-card-inner">
-            <div class="stat-icon stat-icon--purple"><i class="fas fa-users"></i></div>
-            <div>
-                <div class="stat-label">Clientes que compraron</div>
-                <div class="stat-value" style="color:#8b5cf6"><?= $k['clientes_compraron'] ?></div>
-                <div class="stat-sub"><?= $data['clientes_nuevos'] ?> nuevos en el periodo</div>
-            </div>
-        </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-fire" style="color:var(--primary)"></i> Top 10 productos más vendidos</div>
+        <?= repCanvas('c_top10', (bool) $data['top10'], 320) ?>
     </div>
-    <div class="stat-card" style="border-top:3px solid #f59e0b">
-        <div class="stat-card-inner">
-            <div class="stat-icon stat-icon--amber"><i class="fas fa-fire"></i></div>
-            <div>
-                <div class="stat-label">Producto más vendido</div>
-                <div style="font-weight:700;font-size:.92rem;margin-top:4px"><?= htmlspecialchars($data['top_producto']['producto_nombre'] ?? '—') ?></div>
-                <div class="stat-sub"><?= $data['top_producto']['unidades'] ?? 0 ?> unidades</div>
-            </div>
-        </div>
+    <div class="card">
+        <div class="card-title"><i class="fas fa-tags" style="color:var(--primary)"></i> Ventas por categoría</div>
+        <?= repCanvas('c_categoria', (bool) $data['por_categoria'], 320) ?>
     </div>
-    <div class="stat-card" style="border-top:3px solid #0284c7">
-        <div class="stat-card-inner">
-            <div class="stat-icon" style="background:#e0f2fe;color:#0284c7"><i class="fas fa-crown"></i></div>
-            <div>
-                <div class="stat-label">Mejor cliente</div>
-                <div style="font-weight:700;font-size:.92rem;margin-top:4px"><?= htmlspecialchars($data['top_cliente']['nombre'] ?? '—') ?></div>
-                <div class="stat-sub">S/ <?= number_format($data['top_cliente']['gasto'] ?? 0, 2) ?> gastado</div>
-            </div>
-        </div>
+
+    <div class="card">
+        <div class="card-title"><i class="fas fa-circle-notch" style="color:var(--primary)"></i> Pedidos por estado</div>
+        <?= repCanvas('c_estado', (bool) $data['por_estado'], 260) ?>
     </div>
-    <div class="stat-card" style="border-top:3px solid var(--warning)">
-        <div class="stat-card-inner">
-            <div class="stat-icon" style="background:var(--warning-bg);color:var(--warning)"><i class="fas fa-star"></i></div>
-            <div>
-                <div class="stat-label">Puntos otorgados</div>
-                <div class="stat-value" style="color:var(--warning)"><?= $data['puntos']['otorgados'] ?></div>
-                <div class="stat-sub"><?= $data['puntos']['canjeados'] ?> canjeados</div>
-            </div>
+    <div class="card">
+        <div class="rep-card-head">
+            <div class="card-title"><i class="fas fa-users" style="color:var(--primary)"></i> Clientes nuevos vs recurrentes</div>
+            <div class="rep-card-total"><?= (int) $data['clientes_nuevos'] ?> registros nuevos<?= $data['pedidos_invitados'] ? ' · ' . $data['pedidos_invitados'] . ' pedidos de invitados' : '' ?></div>
         </div>
+        <?= repCanvas('c_clientes', $nr['total'] > 0, 260, 'Ningún cliente registrado compró en este periodo') ?>
     </div>
-    <div class="stat-card" style="border-top:3px solid #7c3aed">
-        <div class="stat-card-inner">
-            <div class="stat-icon" style="background:#ede9fe;color:#7c3aed"><i class="fas fa-ticket"></i></div>
-            <div>
-                <div class="stat-label">Cupones generados</div>
-                <div class="stat-value" style="color:#7c3aed"><?= $data['cupones_generados'] ?></div>
-                <div class="stat-sub"><?= $data['cupones_usados'] ?> usados</div>
-            </div>
+
+    <div class="card rep-wide">
+        <div class="rep-card-head">
+            <div class="card-title"><i class="fas fa-star" style="color:var(--primary)"></i> Programa de puntos</div>
+            <div class="rep-card-total"><strong><?= (int) $data['cupones_generados'] ?></strong> cupones generados · <strong><?= (int) $data['cupones_usados'] ?></strong> usados</div>
         </div>
+        <?= repCanvas('c_puntos', repTieneDatos($repCharts['c_puntos']['values']), 200, 'Sin movimientos de puntos en este periodo') ?>
     </div>
 </div>
-<p style="color:var(--text-muted);font-size:.85rem;margin-top:16px">
-    Resumen de <?= date('d/m/Y', strtotime($desde)) ?> al <?= date('d/m/Y', strtotime($hasta)) ?>. Para el detalle de cada área, usa las pestañas de arriba.
+
+<p style="color:var(--text-muted);font-size:.85rem">
+    Del <?= date('d/m/Y', strtotime($desde)) ?> al <?= date('d/m/Y', strtotime($hasta)) ?>, comparado con el
+    <?= date('d/m/Y', strtotime($prevDesde)) ?> – <?= date('d/m/Y', strtotime($prevHastaExcl . ' -1 day')) ?> (<?= $diasPeriodo ?> día<?= $diasPeriodo === 1 ? '' : 's' ?>).
 </p>
 
-<?php elseif ($tab === 'ventas'): ?>
+<?php elseif ($tab === 'ventas'):
+    $paleta = ['#7c3aed', '#0e7490', '#16a34a', '#f59e0b', '#ef4444', '#3b82f6', '#64748b'];
+    $repCharts['c_pago'] = [
+        'type'   => 'doughnut',
+        'labels' => array_map(fn($m) => $pagoLabels[strtolower($m['metodo_pago'])] ?? ucfirst($m['metodo_pago']), $data['por_pago']),
+        'values' => array_map(fn($m) => (int) $m['n'], $data['por_pago']),
+        'extra'  => array_map(fn($m) => (float) $m['total'], $data['por_pago']),
+        'colors' => array_map(fn($m, $i) => $pagoColors[strtolower($m['metodo_pago'])] ?? $paleta[$i % count($paleta)], $data['por_pago'], array_keys($data['por_pago'])),
+    ];
+    $repCharts['c_entrega'] = [
+        'type'   => 'doughnut',
+        'labels' => array_map(fn($e) => $e['tipo_entrega'] === 'recojo' ? 'Recojo en tienda' : 'Delivery', $data['por_entrega']),
+        'values' => array_map(fn($e) => (int) $e['n'], $data['por_entrega']),
+        'extra'  => array_map(fn($e) => (float) $e['total'], $data['por_entrega']),
+        'colors' => array_map(fn($e) => $e['tipo_entrega'] === 'recojo' ? '#0ea5e9' : '#dc2626', $data['por_entrega']),
+    ];
+    $totIng = array_sum(array_column($data['diario'], 'ingresos'));
+    $totPed = array_sum(array_column($data['diario'], 'pedidos'));
+    $totCan = array_sum(array_column($data['diario'], 'cancelados'));
+?>
 
-<div class="card" style="margin-bottom:20px">
-    <div class="card-title"><i class="fas fa-chart-bar" style="color:var(--primary)"></i> Ingresos por día</div>
-    <?php if (!$data['diario']): ?>
-    <div class="empty-state" style="padding:30px"><i class="fas fa-chart-bar"></i><p>Sin ventas en este periodo</p></div>
-    <?php else:
-        $maxTotal = max(array_column($data['diario'], 'ingresos') ?: [1]) ?: 1;
-    ?>
-    <div class="bar-chart" style="overflow-x:auto">
-        <?php foreach ($data['diario'] as $d): $h = max(8, round(floatval($d['ingresos']) / $maxTotal * 100)); ?>
-        <div class="bar-col">
-            <span class="bar-col__amount">S/<?= number_format($d['ingresos'], 0) ?></span>
-            <div class="bar-col__fill" style="height:<?= $h ?>px"></div>
-            <span class="bar-col__label"><?= date('d/m', strtotime($d['dia'])) ?></span>
+<div class="rep-grid rep-grid--3">
+    <div class="card rep-wide">
+        <div class="rep-card-head">
+            <div class="card-title"><i class="fas fa-chart-column" style="color:var(--primary)"></i> Ingresos y pedidos por <?= $granLabel ?></div>
+            <div class="rep-card-total">Total: <strong>S/ <?= number_format($totIng, 2) ?></strong> · <?= $totPed ?> pedidos · <?= $totCan ?> cancelados</div>
         </div>
-        <?php endforeach; ?>
+        <?= repCanvas('c_diario', repTieneDatos($repCharts['c_diario']['pedidos']), 320, 'Sin ventas en este periodo') ?>
     </div>
-    <div class="chart-summary">
-        <span style="color:var(--text-muted)">Total periodo:</span>
-        <strong style="color:var(--primary)">S/ <?= number_format(array_sum(array_column($data['diario'], 'ingresos')), 2) ?></strong>
-        <span style="color:var(--text-muted)"><?= array_sum(array_column($data['diario'], 'pedidos')) ?> pedidos</span>
-    </div>
-    <?php endif; ?>
-</div>
 
-<div class="dash-charts-row dash-charts-row--3">
     <div class="card">
         <div class="card-title"><i class="fas fa-circle-notch" style="color:var(--primary)"></i> Por estado</div>
-        <?php if (!$data['por_estado']): ?>
-        <div class="empty-state" style="padding:20px"><p>Sin datos</p></div>
-        <?php else: $totalE = array_sum(array_column($data['por_estado'], 'n')) ?: 1; ?>
-        <div class="status-bars">
-            <?php foreach ($data['por_estado'] as $es):
-                $pct = round($es['n'] / $totalE * 100);
-                $color = $estadoColors[$es['estado']] ?? '#94a3b8';
-                $label = $estadoLabels[$es['estado']] ?? $es['estado'];
-            ?>
-            <div class="status-item">
-                <div class="status-item__header"><span class="status-item__name"><?= $label ?></span><span class="status-item__count"><?= $es['n'] ?> (<?= $pct ?>%)</span></div>
-                <div class="status-item__track"><div class="status-item__fill" style="background:<?= $color ?>;width:<?= $pct ?>%"></div></div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+        <?= repCanvas('c_estado', (bool) $data['por_estado'], 260) ?>
     </div>
-
     <div class="card">
         <div class="card-title"><i class="fas fa-credit-card" style="color:var(--primary)"></i> Por método de pago</div>
-        <?php if (!$data['por_pago']): ?>
-        <div class="empty-state" style="padding:20px"><p>Sin datos</p></div>
-        <?php else: $totalP = array_sum(array_column($data['por_pago'], 'n')) ?: 1; ?>
-        <div class="status-bars">
-            <?php foreach ($data['por_pago'] as $mp):
-                $pct = round($mp['n'] / $totalP * 100);
-                $color = $pagoColors[strtolower($mp['metodo_pago'])] ?? '#64748b';
-            ?>
-            <div class="status-item">
-                <div class="status-item__header"><span class="status-item__name"><?= htmlspecialchars(ucfirst($mp['metodo_pago'])) ?></span><span class="status-item__count"><?= $mp['n'] ?> (<?= $pct ?>%)</span></div>
-                <div class="status-item__track"><div class="status-item__fill" style="background:<?= $color ?>;width:<?= $pct ?>%"></div></div>
-                <div style="font-size:.72rem;color:var(--text-muted);margin-top:2px">S/ <?= number_format($mp['total'], 2) ?></div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+        <?= repCanvas('c_pago', (bool) $data['por_pago'], 260) ?>
     </div>
-
     <div class="card">
         <div class="card-title"><i class="fas fa-truck" style="color:var(--primary)"></i> Por tipo de entrega</div>
-        <?php if (!$data['por_entrega']): ?>
-        <div class="empty-state" style="padding:20px"><p>Sin datos</p></div>
-        <?php else: $totalEn = array_sum(array_column($data['por_entrega'], 'n')) ?: 1; ?>
-        <div class="status-bars">
-            <?php foreach ($data['por_entrega'] as $en):
-                $pct = round($en['n'] / $totalEn * 100);
-                $label = $en['tipo_entrega'] === 'recojo' ? 'Recojo en tienda' : 'Delivery';
-                $color = $en['tipo_entrega'] === 'recojo' ? '#0ea5e9' : '#dc2626';
-            ?>
-            <div class="status-item">
-                <div class="status-item__header"><span class="status-item__name"><?= $label ?></span><span class="status-item__count"><?= $en['n'] ?> (<?= $pct ?>%)</span></div>
-                <div class="status-item__track"><div class="status-item__fill" style="background:<?= $color ?>;width:<?= $pct ?>%"></div></div>
-            </div>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+        <?= repCanvas('c_entrega', (bool) $data['por_entrega'], 260) ?>
     </div>
 </div>
 
 <?php elseif ($tab === 'productos'): ?>
 
-<?php if ($data['stock_bajo']): ?>
+<div class="rep-grid">
+    <div class="card">
+        <div class="card-title"><i class="fas fa-fire" style="color:var(--primary)"></i> Top 10 productos más vendidos</div>
+        <?= repCanvas('c_top10', (bool) $data['top10'], 340) ?>
+    </div>
+    <div class="card">
+        <div class="card-title"><i class="fas fa-tags" style="color:var(--primary)"></i> Ventas por categoría</div>
+        <?= repCanvas('c_categoria', (bool) $data['por_categoria'], 340) ?>
+    </div>
+</div>
+
+<?php if ($data['stock_bajo']): $nStock = count($data['stock_bajo']); ?>
 <div class="alert alert-warning" style="margin-bottom:20px">
-    <i class="fas fa-exclamation-triangle"></i> <?= count($data['stock_bajo']) ?> producto(s) con stock bajo (≤5 unidades):
-    <?= implode(', ', array_map(fn($p) => htmlspecialchars($p['nombre']) . ' (' . $p['stock'] . ')', $data['stock_bajo'])) ?>
+    <i class="fas fa-exclamation-triangle"></i> <?= number_format($nStock) ?> producto(s) con stock bajo (≤5 unidades):
+    <?= implode(', ', array_map(fn($p) => htmlspecialchars($p['nombre']) . ' (' . $p['stock'] . ')', array_slice($data['stock_bajo'], 0, 25))) ?>
+    <?= $nStock > 25 ? ' y ' . number_format($nStock - 25) . ' más. <a href="' . BASE_URL . '/admin/productos.php">Ver en Productos</a>' : '' ?>
 </div>
 <?php endif; ?>
 
@@ -555,22 +693,6 @@ $tipoMovLabel = ['ganado' => 'Ganado', 'canjeado' => 'Canjeado', 'revertido' => 
         <?php endforeach; ?>
         </tbody>
     </table>
-    <?php endif; ?>
-</div>
-
-<div class="card">
-    <div class="card-title"><i class="fas fa-tags" style="color:var(--primary)"></i> Ventas por categoría</div>
-    <?php if (!$data['por_categoria']): ?>
-    <div class="empty-state" style="padding:20px"><p>Sin datos</p></div>
-    <?php else: $totalCat = array_sum(array_column($data['por_categoria'], 'ingresos')) ?: 1; ?>
-    <div class="status-bars">
-        <?php foreach ($data['por_categoria'] as $c): $pct = round(floatval($c['ingresos']) / $totalCat * 100); ?>
-        <div class="status-item">
-            <div class="status-item__header"><span class="status-item__name"><?= htmlspecialchars($c['categoria']) ?></span><span class="status-item__count">S/ <?= number_format($c['ingresos'], 2) ?> (<?= $pct ?>%)</span></div>
-            <div class="status-item__track"><div class="status-item__fill" style="background:var(--primary);width:<?= $pct ?>%"></div></div>
-        </div>
-        <?php endforeach; ?>
-    </div>
     <?php endif; ?>
 </div>
 
@@ -724,6 +846,98 @@ $tipoMovLabel = ['ganado' => 'Ganado', 'canjeado' => 'Canjeado', 'revertido' => 
     <?php endif; ?>
 </div>
 
+<?php endif; ?>
+
+<?php if ($repCharts): ?>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" integrity="sha384-bs/nf9FbdNouRbMiFcrcZfLXYPKiPaGVGplVbv7dLGECccEXDW+S3zjqSKR5ZEaD" crossorigin="anonymous"></script>
+<script>
+(function () {
+    if (typeof Chart === 'undefined') return; // sin CDN: la página sigue mostrando cifras y tablas
+    const SPECS = <?= json_encode($repCharts, JSON_UNESCAPED_UNICODE) ?>;
+    const css = getComputedStyle(document.documentElement);
+    const v = (n, d) => (css.getPropertyValue(n) || '').trim() || d;
+    const PRIMARY = v('--primary', '#dc2626'), MUTED = v('--text-muted', '#64748b'), BORDER = v('--border', '#e2e8f0');
+    const alpha = (hex, a) => { const m = hex.replace('#', '').match(/^([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i);
+        return m ? `rgba(${parseInt(m[1], 16)},${parseInt(m[2], 16)},${parseInt(m[3], 16)},${a})` : hex; };
+    const money = n => 'S/ ' + Number(n).toLocaleString('es-PE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const num = n => Number(n).toLocaleString('es-PE');
+
+    Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+    Chart.defaults.color = MUTED;
+    Chart.defaults.borderColor = BORDER;
+    Chart.defaults.maintainAspectRatio = false;
+    Chart.defaults.plugins.legend.labels.usePointStyle = true;
+
+    const builders = {
+        // Barras de ingresos + línea de pedidos (eje derecho)
+        combo: s => ({
+            data: { labels: s.labels, datasets: [
+                { type: 'bar', label: 'Ingresos', data: s.ingresos, backgroundColor: alpha(PRIMARY, .75), borderRadius: 4, yAxisID: 'y', order: 2 },
+                { type: 'line', label: 'Pedidos', data: s.pedidos, borderColor: '#0ea5e9', backgroundColor: '#0ea5e9', tension: .3, pointRadius: s.labels.length > 45 ? 0 : 3, yAxisID: 'y1', order: 1 },
+            ] },
+            options: {
+                interaction: { mode: 'index', intersect: false },
+                scales: {
+                    x: { grid: { display: false }, ticks: { maxRotation: 0, autoSkip: true, autoSkipPadding: 12 } },
+                    y:  { beginAtZero: true, ticks: { callback: n => 'S/ ' + num(n) } },
+                    y1: { beginAtZero: true, position: 'right', grid: { drawOnChartArea: false }, ticks: { precision: 0 } },
+                },
+                plugins: { tooltip: { callbacks: { label: c => c.dataset.yAxisID === 'y' ? ' Ingresos: ' + money(c.raw) : ' Pedidos: ' + num(c.raw) } } },
+            },
+        }),
+        // Barras horizontales (ranking)
+        hbar: s => ({
+            type: 'bar',
+            data: { labels: s.labels, datasets: [{ data: s.values, backgroundColor: alpha(PRIMARY, .8), borderRadius: 4, maxBarThickness: 22 }] },
+            options: {
+                indexAxis: 'y',
+                scales: { x: { beginAtZero: true, ticks: { callback: n => s.unit === 'money' ? 'S/ ' + num(n) : num(n), precision: 0 } }, y: { grid: { display: false } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + (s.unit === 'money' ? money(c.raw) : num(c.raw) + ' ' + s.unit) } } },
+            },
+        }),
+        // Barras verticales con un color por barra
+        bars: s => ({
+            type: 'bar',
+            data: { labels: s.labels, datasets: [{ data: s.values, backgroundColor: s.colors, borderRadius: 6, maxBarThickness: 60 }] },
+            options: {
+                scales: { y: { beginAtZero: true, ticks: { precision: 0 } }, x: { grid: { display: false } } },
+                plugins: { legend: { display: false }, tooltip: { callbacks: { label: c => ' ' + num(c.raw) + ' ' + s.unit } } },
+            },
+        }),
+        doughnut: s => ({
+            type: 'doughnut',
+            data: { labels: s.labels, datasets: [{ data: s.values, backgroundColor: s.colors, borderWidth: 2, borderColor: v('--surface', '#fff') }] },
+            options: {
+                cutout: '62%',
+                plugins: {
+                    legend: { position: 'right' },
+                    tooltip: { callbacks: { label: c => {
+                        const total = c.dataset.data.reduce((a, b) => a + b, 0) || 1;
+                        let t = ` ${c.label}: ${num(c.raw)} (${Math.round(c.raw / total * 100)}%)`;
+                        if (s.extra) t += ' · ' + money(s.extra[c.dataIndex]);
+                        return t;
+                    } } },
+                },
+            },
+        }),
+        // Mini línea de tendencia (franja de cifras)
+        spark: s => ({
+            type: 'line',
+            data: { labels: s.values.map((_, i) => i), datasets: [{ data: s.values, borderColor: PRIMARY, backgroundColor: alpha(PRIMARY, .12), fill: true, tension: .35, pointRadius: 0, borderWidth: 2 }] },
+            options: { scales: { x: { display: false }, y: { display: false, beginAtZero: true } },
+                       plugins: { legend: { display: false }, tooltip: { enabled: false } }, animation: false, events: [] },
+        }),
+    };
+
+    Object.entries(SPECS).forEach(([id, spec]) => {
+        const canvas = document.getElementById(id);
+        if (!canvas || !builders[spec.type]) return;
+        const cfg = builders[spec.type](spec);
+        cfg.type = cfg.type || 'bar';
+        new Chart(canvas, cfg);
+    });
+})();
+</script>
 <?php endif; ?>
 
 <?php require_once __DIR__ . '/includes/footer.php'; ?>
