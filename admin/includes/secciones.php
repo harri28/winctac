@@ -20,11 +20,11 @@ const ADMIN_SECCIONES = [
     ]],
     'configuracion' => ['Configuración', 'fa-cog', [
         'config'            => ['config.php',            'fa-sliders-h',          'Configuración'],
+        'banco'             => ['banco.php',             'fa-university',         'Banco'],
         'facturacion'       => ['facturacion.php',       'fa-file-invoice',       'Facturación'],
         'banners'           => ['banners.php',           'fa-images',             'Banners'],
         'banners_popup'     => ['banners-popup.php',     'fa-window-maximize',    'Banners pop-up'],
         'banners_flotantes' => ['banners-flotantes.php', 'fa-envelope-open-text', 'Banners flotantes'],
-        'portal_web'        => ['portal-web.php',        'fa-globe',              'Portal Web'],
     ]],
 ];
 

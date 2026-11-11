@@ -11,10 +11,19 @@ $cfg = $cfgStmt->fetch();
 $success = '';
 $error   = '';
 
-// Guardar configuración general
+// Conteos reales del catálogo (sugerencia para las estadísticas de "Nosotros")
+$numProdStmt = $pdo->prepare('SELECT COUNT(*) FROM productos WHERE activo = TRUE AND tienda_id = ?');
+$numProdStmt->execute([TIENDA_ID]);
+$numProductosReal = (int) $numProdStmt->fetchColumn();
+$numCatStmt = $pdo->prepare('SELECT COUNT(*) FROM categorias WHERE activo = TRUE AND tienda_id = ?');
+$numCatStmt->execute([TIENDA_ID]);
+$numCategoriasReal = (int) $numCatStmt->fetchColumn();
+
+// Guardar configuración general (incluye Datos de la tienda y la página
+// "Nosotros"). Los datos bancarios y el QR se guardan en la pestaña Banco
+// (admin/banco.php): aquí no se tocan, para no borrarlos.
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     $fields = ['nombre_tienda','descripcion','whatsapp_numero','whatsapp_mensaje',
-               'banco_nombre','banco_cuenta','banco_cci','banco_titular',
                'contacto_email','contacto_celular','color_primary',
                'red_facebook','red_instagram','red_tiktok','red_youtube','red_linkedin'];
 
@@ -28,16 +37,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_config'])) {
     $sets .= ', carrito_activo = :carrito_activo';
     $params['carrito_activo'] = isset($_POST['carrito_activo']) ? 't' : 'f';
 
-    // Subir QR de billetera digital
-    if (!empty($_FILES['billetera_qr']['tmp_name'])) {
-        $ext = strtolower(pathinfo($_FILES['billetera_qr']['name'], PATHINFO_EXTENSION));
-        if (in_array($ext, ['jpg','jpeg','png','gif','webp'])) {
-            $fname = 'billetera_qr_' . time() . '.' . $ext;
-            $dest = UPLOADS_PATH . '/' . $fname;
+    // Página "Nosotros" (antes en Portal Web)
+    $sets .= ', portal_vision = :portal_vision, portal_mision = :portal_mision, portal_historia = :portal_historia'
+           . ', portal_stat_productos = :portal_stat_productos, portal_stat_categorias = :portal_stat_categorias'
+           . ', portal_direccion = :portal_direccion';
+    $params['portal_vision']          = sanitizarRichText(trim($_POST['portal_vision'] ?? ''));
+    $params['portal_mision']          = sanitizarRichText(trim($_POST['portal_mision'] ?? ''));
+    $params['portal_historia']        = sanitizarRichText(trim($_POST['portal_historia'] ?? ''));
+    $params['portal_stat_productos']  = trim(mb_substr($_POST['portal_stat_productos'] ?? '', 0, 20));
+    $params['portal_stat_categorias'] = trim(mb_substr($_POST['portal_stat_categorias'] ?? '', 0, 20));
+    $params['portal_direccion']       = trim(mb_substr($_POST['portal_direccion'] ?? '', 0, 300));
+
+    // Imagen de portada de "Nosotros"
+    if (!empty($_FILES['hero']['tmp_name'])) {
+        $ext = strtolower(pathinfo($_FILES['hero']['name'], PATHINFO_EXTENSION));
+        if (in_array($ext, ['jpg', 'jpeg', 'png', 'webp'], true)) {
+            $fname = 'portal_hero_' . time() . '.' . $ext;
             if (!is_dir(UPLOADS_PATH)) mkdir(UPLOADS_PATH, 0775, true);
-            if (move_uploaded_file($_FILES['billetera_qr']['tmp_name'], $dest)) {
-                $sets .= ', billetera_qr_path = :billetera_qr_path';
-                $params['billetera_qr_path'] = $fname;
+            if (move_uploaded_file($_FILES['hero']['tmp_name'], UPLOADS_PATH . '/' . $fname)) {
+                $sets .= ', portal_hero_path = :portal_hero_path';
+                $params['portal_hero_path'] = $fname;
             }
         }
     }
@@ -135,15 +154,37 @@ foreach ($usosRaw as $r) { $usosPorEmpresa[(int) $r['empresa_envio_id']] = (int)
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
 <?php endif; ?>
 
-<form method="POST" enctype="multipart/form-data">
-<div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start">
+<?php
+// Editor de texto enriquecido (negrita, cursiva, alineación) para Visión,
+// Misión y ¿Quiénes somos?: barra + área editable + input oculto que se
+// sincroniza al enviar el formulario.
+$__rte = function (string $field, string $valor, int $minRows) {
+    $minHeight = $minRows * 20 + 16;
+    ?>
+    <div class="rte-toolbar">
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="bold" title="Negrita"><i class="fas fa-bold"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="italic" title="Cursiva"><i class="fas fa-italic"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyLeft" title="Alinear a la izquierda"><i class="fas fa-align-left"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyCenter" title="Centrar"><i class="fas fa-align-center"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyRight" title="Alinear a la derecha"><i class="fas fa-align-right"></i></button>
+        <button type="button" class="rte-btn" data-target="rte-<?= $field ?>" data-cmd="justifyFull" title="Justificar texto"><i class="fas fa-align-justify"></i></button>
+    </div>
+    <div id="rte-<?= $field ?>" class="form-control rte-editable" style="min-height:<?= $minHeight ?>px" contenteditable="true"><?= renderRichText($valor) ?></div>
+    <input type="hidden" name="portal_<?= $field ?>" id="rte-<?= $field ?>-input">
+    <?php
+};
+?>
 
-<!-- Col 1 -->
-<div style="display:flex;flex-direction:column;gap:20px">
+<form method="POST" enctype="multipart/form-data" id="form-config">
 
-    <!-- Tienda -->
-    <div class="card">
-        <div class="card-title"><i class="fas fa-store"></i> Datos de la tienda</div>
+<!-- Datos de la tienda (incluye la página "Nosotros", antes pestaña Portal Web) -->
+<div class="card" id="datos-tienda" style="margin-bottom:24px">
+    <div class="card-title"><i class="fas fa-store"></i> Datos de la tienda</div>
+    <div class="portal-web-grid">
+
+    <!-- Identidad -->
+    <div class="portal-web-col-left">
+        <div class="config-subtitulo"><i class="fas fa-id-badge"></i> Identidad</div>
         <div class="form-group">
             <label class="form-label">Nombre de la tienda</label>
             <input type="text" name="nombre_tienda" class="form-control" value="<?= htmlspecialchars($cfg['nombre_tienda'] ?? '') ?>">
@@ -179,9 +220,69 @@ foreach ($usosRaw as $r) { $usosPorEmpresa[(int) $r['empresa_envio_id']] = (int)
         </label>
         <div class="form-hint">
             <strong>Activado:</strong> funciona como tienda online normal — el cliente agrega productos al carrito, hace checkout y paga.<br>
-            <strong>Desactivado (modo catálogo electrónico):</strong> el sitio muestra los productos con precio y stock, pero no se puede comprar. En cada producto se reemplaza el botón "Agregar al carrito" por "Consultar por WhatsApp" (usa el número de WhatsApp configurado arriba). Las páginas de carrito y checkout quedan deshabilitadas.
+            <strong>Desactivado (modo catálogo electrónico):</strong> el sitio muestra los productos con precio y stock, pero no se puede comprar. En cada producto se reemplaza el botón "Agregar al carrito" por "Consultar por WhatsApp" (usa el número de WhatsApp configurado abajo). Las páginas de carrito y checkout quedan deshabilitadas.
         </div>
     </div>
+
+    <!-- Página "Nosotros" -->
+    <div style="display:flex;flex-direction:column;gap:4px;min-width:0">
+        <div class="config-subtitulo" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">
+            <span><i class="fas fa-building"></i> Página "Nosotros"</span>
+            <a href="<?= BASE_URL ?>/nosotros" target="_blank" style="font-size:.8rem;font-weight:600"><i class="fas fa-eye"></i> Ver página</a>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Imagen de portada</label>
+            <?php if (!empty($cfg['portal_hero_path']) && file_exists(UPLOADS_PATH . '/' . $cfg['portal_hero_path'])): ?>
+            <img src="<?= UPLOADS_URL ?>/<?= htmlspecialchars($cfg['portal_hero_path']) ?>" alt="Portada actual" style="max-width:100%;max-height:180px;border-radius:var(--radius);display:block;margin-bottom:8px">
+            <?php endif; ?>
+            <input type="file" name="hero" class="form-control" accept="image/jpeg,image/png,image/webp">
+            <div class="form-hint">Foto grande del encabezado de "Nosotros" (tienda, local, equipo, etc.)</div>
+        </div>
+
+        <div class="form-group">
+            <label class="form-label">Visión</label>
+            <?php $__rte('vision', $cfg['portal_vision'] ?? '', 3) ?>
+        </div>
+        <div class="form-group">
+            <label class="form-label">Misión</label>
+            <?php $__rte('mision', $cfg['portal_mision'] ?? '', 3) ?>
+        </div>
+        <div class="form-group">
+            <label class="form-label">¿Quiénes somos?</label>
+            <?php $__rte('historia', $cfg['portal_historia'] ?? '', 4) ?>
+        </div>
+
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:0 16px">
+            <div class="form-group">
+                <label class="form-label">Estadística: productos</label>
+                <input type="text" name="portal_stat_productos" class="form-control" maxlength="20"
+                       placeholder="<?= $numProductosReal ?>+" value="<?= htmlspecialchars($cfg['portal_stat_productos'] ?? '') ?>">
+                <div class="form-hint">Vacío = automático (<?= $numProductosReal ?>+ activos)</div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Estadística: categorías</label>
+                <input type="text" name="portal_stat_categorias" class="form-control" maxlength="20"
+                       placeholder="<?= $numCategoriasReal ?>" value="<?= htmlspecialchars($cfg['portal_stat_categorias'] ?? '') ?>">
+                <div class="form-hint">Vacío = automático (<?= $numCategoriasReal ?> activas)</div>
+            </div>
+        </div>
+
+        <div class="form-group" style="margin-bottom:0">
+            <label class="form-label">Encuéntranos — dirección</label>
+            <input type="text" name="portal_direccion" class="form-control" maxlength="300"
+                   placeholder="Jr. Ejemplo 123, Moyobamba, San Martín" value="<?= htmlspecialchars($cfg['portal_direccion'] ?? '') ?>">
+            <div class="form-hint">Muestra un mapa con el correo y celular de <strong>Contacto</strong> en "Nosotros". Déjala vacía para ocultar esa sección.</div>
+        </div>
+    </div>
+
+    </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:24px;align-items:start">
+
+<!-- Col 1 -->
+<div style="display:flex;flex-direction:column;gap:20px">
 
     <!-- Contacto (footer: botón "Contáctanos") -->
     <div class="card">
@@ -213,6 +314,11 @@ foreach ($usosRaw as $r) { $usosPorEmpresa[(int) $r['empresa_envio_id']] = (int)
         <div class="form-hint">El número también activa el botón flotante de WhatsApp y los accesos de Inicio y Contacto.</div>
     </div>
 
+</div>
+
+<!-- Col 2 -->
+<div style="display:flex;flex-direction:column;gap:20px">
+
     <!-- Redes sociales -->
     <div class="card">
         <div class="card-title"><i class="fas fa-share-nodes"></i> Redes sociales</div>
@@ -231,48 +337,35 @@ foreach ($usosRaw as $r) { $usosPorEmpresa[(int) $r['empresa_envio_id']] = (int)
         <div class="form-hint">Deja vacía la red que no uses. Se muestran en Inicio, Contacto y el pie de página.</div>
     </div>
 
+    <div class="form-hint" style="margin:0"><i class="fas fa-university"></i> Los datos para transferencias y el QR de billetera digital están en la pestaña <a href="<?= BASE_URL ?>/admin/banco.php">Banco</a>.</div>
+
+</div>
 </div>
 
-<!-- Col 2 -->
-<div style="display:flex;flex-direction:column;gap:20px">
-
-    <!-- Banco / Billetera digital -->
-    <div class="card">
-        <div class="card-title"><i class="fas fa-university"></i> Transferencia bancaria</div>
-        <div class="form-group">
-            <label class="form-label">Banco</label>
-            <input type="text" name="banco_nombre" class="form-control" placeholder="BCP, Interbank..." value="<?= htmlspecialchars($cfg['banco_nombre'] ?? '') ?>">
-        </div>
-        <div class="form-group">
-            <label class="form-label">N° de cuenta</label>
-            <input type="text" name="banco_cuenta" class="form-control" value="<?= htmlspecialchars($cfg['banco_cuenta'] ?? '') ?>">
-        </div>
-        <div class="form-group">
-            <label class="form-label">CCI</label>
-            <input type="text" name="banco_cci" class="form-control" value="<?= htmlspecialchars($cfg['banco_cci'] ?? '') ?>">
-        </div>
-        <div class="form-group">
-            <label class="form-label">Titular</label>
-            <input type="text" name="banco_titular" class="form-control" value="<?= htmlspecialchars($cfg['banco_titular'] ?? '') ?>">
-        </div>
-        <div class="form-group" style="margin-bottom:0">
-            <label class="form-label">QR de billetera digital</label>
-            <?php if (!empty($cfg['billetera_qr_path'])): ?>
-            <div style="margin-bottom:6px"><img src="<?= UPLOADS_URL ?>/<?= htmlspecialchars($cfg['billetera_qr_path']) ?>" style="height:120px;border-radius:6px"></div>
-            <?php endif; ?>
-            <input type="file" name="billetera_qr" class="form-control" accept="image/*">
-            <div class="form-hint">Este QR es el que ve el cliente en el checkout al elegir "Billetera digital" (Yape, Plin o cualquier billetera que lea QR)</div>
-        </div>
-    </div>
-
-    <div style="display:flex;gap:10px">
-        <button type="submit" name="save_config" class="btn btn-primary btn-lg" style="flex:1">
-            <i class="fas fa-save"></i> Guardar configuración
-        </button>
-    </div>
-</div>
+<div style="margin-top:20px">
+    <button type="submit" name="save_config" class="btn btn-primary btn-lg" style="width:100%">
+        <i class="fas fa-save"></i> Guardar configuración
+    </button>
 </div>
 </form>
+
+<style>
+.config-subtitulo { font-size:.8rem; font-weight:700; text-transform:uppercase; letter-spacing:.03em; color:var(--text-muted); margin-bottom:12px; }
+</style>
+<script>
+// Editor de "Nosotros": botones de formato + volcar el HTML al input oculto al guardar
+document.querySelectorAll('.rte-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+        document.getElementById(btn.dataset.target).focus();
+        document.execCommand(btn.dataset.cmd, false, null);
+    });
+});
+document.getElementById('form-config').addEventListener('submit', () => {
+    ['vision', 'mision', 'historia'].forEach(f => {
+        document.getElementById('rte-' + f + '-input').value = document.getElementById('rte-' + f).innerHTML;
+    });
+});
+</script>
 
 <!-- Empresas de envío -->
 <div class="card" style="margin-top:28px">
