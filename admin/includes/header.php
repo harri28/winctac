@@ -60,6 +60,14 @@ try {
 } catch (Exception $e) {
     $mensajesNuevosCount = 0;
 }
+
+// Retener el HTML del panel hasta el final del request: varias páginas procesan
+// su formulario DESPUÉS de incluir este header y luego redirigen con
+// header('Location: ...'). Sin este búfer, el menú ya supera los 4 KB de
+// output_buffering de PHP, las cabeceras salen antes de tiempo, la redirección
+// falla ("headers already sent") y la página queda en blanco tras guardar.
+// PHP vacía el búfer automáticamente al terminar el script.
+ob_start();
 ?>
 <!DOCTYPE html>
 <html lang="es">
