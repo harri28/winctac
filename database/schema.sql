@@ -98,7 +98,7 @@ CREATE TABLE IF NOT EXISTS pedido_detalles (
 );
 
 -- Overrides de productos (imagen, visibilidad, precio personalizado, nombre)
--- Obsoleta desde que el catálogo es local (ver `productos` más abajo); se
+-- Obsoleta desde que el catálogo es local (ver `productos` más abajo), se
 -- deja para no perder datos históricos pero ya no la usa ningún código.
 CREATE TABLE IF NOT EXISTS productos_override (
     producto_id INTEGER PRIMARY KEY,
@@ -201,7 +201,7 @@ CREATE TABLE IF NOT EXISTS campanas (
     UNIQUE(tienda_id, codigo)
 );
 
--- Configuración general (una fila por tienda; el id ES el id de la tienda)
+-- Configuración general (una fila por tienda, el id ES el id de la tienda)
 CREATE TABLE IF NOT EXISTS config (
     id INTEGER PRIMARY KEY REFERENCES tiendas(id),
     -- Tienda
@@ -246,9 +246,9 @@ CREATE TABLE IF NOT EXISTS config (
     -- apagado, sigue bloqueando la compra cuando stock=0, solo se ocultan
     -- los números exactos de "X disponibles"/"Últimas X unidades")
     mostrar_stock BOOLEAN DEFAULT TRUE,
-    -- Modo tienda: TRUE = e-commerce (carrito activo); FALSE = catálogo
+    -- Modo tienda: TRUE = e-commerce (carrito activo), FALSE = catálogo
     -- electrónico (sin compra, cada producto muestra botón "Consultar por
-    -- WhatsApp"; carrito/checkout/confirmación redirigen al home; crear_pedido
+    -- WhatsApp", carrito/checkout/confirmación redirigen al home y crear_pedido
     -- en api/ responde 403 aunque alguien lo invoque directo)
     carrito_activo BOOLEAN DEFAULT TRUE,
     updated_at TIMESTAMP DEFAULT NOW()
