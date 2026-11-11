@@ -53,9 +53,7 @@ if (isset($_GET['ok'])) $success = 'Recompensa eliminada.';
 $recompensas = $pdo->query('SELECT * FROM puntos_recompensas ORDER BY costo_puntos ASC')->fetchAll();
 ?>
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title"><i class="fas fa-award"></i> Beneficios / Recompensas</h1>
-</div>
+<?php require __DIR__ . '/includes/fidelizacion_tabs.php'; ?>
 
 <?php if ($success): ?>
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>

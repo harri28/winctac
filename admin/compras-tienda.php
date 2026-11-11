@@ -120,16 +120,13 @@ $estadosLabel = [
 ];
 ?>
 
-<div class="admin-topbar">
-    <div>
-        <h1 class="admin-page-title"><i class="fas fa-cash-register"></i> Compras en tienda</h1>
-        <p style="color:var(--text-muted);font-size:.85rem;margin-top:2px">
-            Compras registradas en el ERP / tienda física que acumulan puntos. Se identifican por el DNI del cliente afiliado
-            y por el número de comprobante (no se acredita dos veces el mismo). Regla actual:
-            <strong><?= rtrim(rtrim(number_format((float) ($cfgP['puntos_por_sol'] ?? 1), 2), '0'), '.') ?> punto(s) por cada S/ 1</strong>.
-        </p>
-    </div>
-</div>
+<?php require __DIR__ . '/includes/fidelizacion_tabs.php'; ?>
+
+<p style="color:var(--text-muted);font-size:.85rem;margin:-8px 0 18px">
+    Compras registradas en el ERP / tienda física que acumulan puntos. Se identifican por el DNI del cliente afiliado
+    y por el número de comprobante (no se acredita dos veces el mismo). Regla actual:
+    <strong><?= rtrim(rtrim(number_format((float) ($cfgP['puntos_por_sol'] ?? 1), 2), '0'), '.') ?> punto(s) por cada S/ 1</strong>.
+</p>
 
 <?php if ($success): ?><div class="alert alert-success"><?= htmlspecialchars($success) ?></div><?php endif; ?>
 <?php if ($error): ?><div class="alert alert-error"><?= htmlspecialchars($error) ?></div><?php endif; ?>

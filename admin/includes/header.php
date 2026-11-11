@@ -173,13 +173,10 @@ document.addEventListener('click', function (event) {
             ['type' => 'group', 'icon' => 'fa-users', 'label' => 'Clientes', 'children' => [
                 ['page' => 'clientes', 'href' => BASE_URL . '/admin/clientes.php', 'icon' => 'fa-user', 'label' => 'Clientes'],
             ]],
-            ['type' => 'group', 'icon' => 'fa-gift', 'label' => 'Fidelización', 'children' => [
-                ['page' => 'puntos',      'href' => BASE_URL . '/admin/puntos.php',      'icon' => 'fa-star',         'label' => 'Programa de puntos'],
-                ['page' => 'compras_tienda', 'href' => BASE_URL . '/admin/compras-tienda.php', 'icon' => 'fa-cash-register', 'label' => 'Compras en tienda'],
-                ['page' => 'recompensas', 'href' => BASE_URL . '/admin/recompensas.php', 'icon' => 'fa-award',        'label' => 'Beneficios / Recompensas'],
-                ['page' => 'cupones',     'href' => BASE_URL . '/admin/cupones.php',     'icon' => 'fa-ticket',       'label' => 'Cupones'],
-                ['page' => 'niveles',     'href' => BASE_URL . '/admin/niveles.php',     'icon' => 'fa-layer-group',  'label' => 'Niveles de cliente'],
-            ]],
+            // Una sola entrada: sus secciones son pestañas dentro de la pantalla
+            // (admin/includes/fidelizacion_tabs.php). 'pages' = páginas en las que queda activa.
+            ['type' => 'link', 'page' => 'puntos', 'pages' => ['puntos', 'compras_tienda', 'recompensas', 'cupones', 'niveles'],
+             'href' => BASE_URL . '/admin/puntos.php', 'icon' => 'fa-gift', 'label' => 'Fidelización'],
             ['type' => 'group', 'icon' => 'fa-bullhorn', 'label' => 'Marketing', 'children' => [
                 ['page' => 'campanas',    'href' => BASE_URL . '/admin/campanas.php',    'icon' => 'fa-flag',       'label' => 'Campañas'],
                 ['page' => 'promociones', 'href' => BASE_URL . '/admin/promociones.php', 'icon' => 'fa-percentage', 'label' => 'Promociones'],
@@ -199,7 +196,7 @@ document.addEventListener('click', function (event) {
 
         foreach ($adminMenu as $item):
             if ($item['type'] === 'link'):
-                $active = $adminPage === $item['page'];
+                $active = in_array($adminPage, $item['pages'] ?? [$item['page']], true);
         ?>
         <a href="<?= $item['href'] ?>" class="<?= $active ? 'active' : '' ?>" style="display:flex;align-items:center">
             <i class="fas <?= $item['icon'] ?>"></i> <?= $item['label'] ?>

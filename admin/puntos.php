@@ -24,9 +24,7 @@ $cfgStmt->execute([TIENDA_ID]);
 $cfg = $cfgStmt->fetch();
 ?>
 
-<div class="admin-topbar">
-    <h1 class="admin-page-title"><i class="fas fa-star"></i> Programa de puntos</h1>
-</div>
+<?php require __DIR__ . '/includes/fidelizacion_tabs.php'; ?>
 
 <?php if ($success): ?>
 <div class="alert alert-success"><?= htmlspecialchars($success) ?></div>
